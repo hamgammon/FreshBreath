@@ -1,8 +1,26 @@
 # FreshBreath 🌿
 
-**FreshBreath** is a dedicated mindful breathing and meditation activity application built for the **UNA Watch platform** using the UNA Watch SDK.
+<p align="center">
+  <img src="Resources/icon_512x512.png" width="140" height="140" alt="FreshBreath App Icon" /><br/>
+  <b>Mindful Breathing & Meditation Activity for UNA Watch</b><br/>
+  <code>App ID: 432197B5C95258BF</code> • <code>Version: v1.0.0</code> • <code>Type: Activity</code>
+</p>
 
-FreshBreath runs as a native watch activity (`APP_TYPE "Activity"`). It guides the user through proven breathwork techniques with real-time visual pacing on a 240x240 display, sensory haptic vibration guidance for eyes-closed practice, live PPG heart-rate tracking, and automated FIT/JSON workout logging that records each session as a structured workout with the breathwork pattern explicitly named in the title (e.g., `Breathwork - 4:4:4:4 Method`).
+---
+
+## 📸 Device Screenshots
+
+Official UNA Watch photorealistic mockups rendered across **Teal**, **Black**, and **White** case finishes:
+
+| Main Screen (Teal Watch) | Pattern Selection (Black Watch) | Inhale Phase (White Watch) |
+| :---: | :---: | :---: |
+| <img src="assets/screenshots/screenshot_01_main_teal.png" width="280" alt="FreshBreath Main Screen" /> | <img src="assets/screenshots/screenshot_02_pattern_select_black.png" width="280" alt="Select Pattern" /> | <img src="assets/screenshots/screenshot_03_breath_inhale_white.png" width="280" alt="Inhale Phase" /> |
+| *Session setup & target duration* | *Box Breathing (4:4:4:4 Method)* | *Active expanding guide (68 bpm)* |
+
+| Hold Phase (Teal Watch) | Exhale Phase (Black Watch) | Workout Summary (White Watch) |
+| :---: | :---: | :---: |
+| <img src="assets/screenshots/screenshot_04_breath_hold_teal.png" width="280" alt="Hold Phase" /> | <img src="assets/screenshots/screenshot_05_breath_exhale_black.png" width="280" alt="Exhale Phase" /> | <img src="assets/screenshots/screenshot_06_summary_white.png" width="280" alt="Summary Screen" /> |
+| *Yellow retention circle ring* | *Contracting sky-blue guide* | *FIT workout saved with metrics* |
 
 ---
 
@@ -24,9 +42,9 @@ FreshBreath includes 6 scientifically validated breathwork protocols:
 ## ⚡ Key Features
 
 1. **Native Activity Lifecycle (`APP_TYPE "Activity"`)**
-   - Implemented using UNA SDK's dual-process model: `FreshBreathService.elf` (background sensory/data engine) and `FreshBreathGUI.elf` (LVGL hardware-accelerated GUI).
+   - Implemented using UNA SDK's dual-process architecture: `FreshBreathService.elf` (background sensory/data engine) and `FreshBreathGUI.elf` (LVGL hardware-accelerated GUI).
 2. **Visual Pacer & Animation**
-   - 240x240 circular bezel arc that smoothly expands clockwise in glowing cyan during **Inhale**, remains steady in yellow during **Hold**, contracts counter-clockwise in sky blue during **Exhale**, and displays a clear countdown timer.
+   - 240x240 circular bezel arc that smoothly expands clockwise in glowing cyan during **Inhale**, remains steady in yellow during **Hold**, contracts in sky blue during **Exhale**, and displays a real-time countdown timer.
 3. **Eyes-Closed Haptic Feedback**
    - Utilizes `RequestVibroPlay` to pulse at every phase transition (gentle double click on inhale, soft tick on hold, smooth buzz on exhale, and alert on workout completion). Users can meditate with eyes closed without staring at the screen.
 4. **Workout Saving & Activity Naming**
@@ -71,11 +89,19 @@ The watch uses the 4 hardware bezel buttons:
 
 ```
 FreshBreath/
+├── assets/
+│   ├── mockups/                       # Official Penpot UNA Watch device templates
+│   ├── previews/                      # Standalone 240x240 circular UI screens
+│   └── screenshots/                   # Device renders (Teal, Black, White)
 ├── Output/
-│   └── FreshBreath_1.0.0.uapp         # Packaged watch executable (v1.0.0)
+│   └── FreshBreath_1.0.0.uapp         # Packaged watch executable (v1.0.0, ID: 432197B5C95258BF)
 ├── Resources/
-│   ├── icon_30x30.png                 # Small 30x30 launcher icon
-│   └── icon_60x60.png                 # Main 60x60 menu icon
+│   ├── icon_512x512.png               # High-res store/marketing icon
+│   ├── icon_60x60.png                 # Main 60x60 launcher menu icon
+│   └── icon_30x30.png                 # Small 30x30 list/tray icon
+├── scripts/
+│   ├── generate_icons.py              # Icon generation utility
+│   └── generate_screenshots.py        # Screen renderer & device mockup compositor
 └── Software/
     ├── Libs/
     │   ├── Header/
