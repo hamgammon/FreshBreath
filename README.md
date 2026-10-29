@@ -72,7 +72,7 @@ The watch uses the 4 hardware bezel buttons:
 ```
 FreshBreath/
 ├── Output/
-│   └── FreshBreath_0.0.0-dev.uapp     # Packaged watch executable
+│   └── FreshBreath_1.0.0.uapp         # Packaged watch executable (v1.0.0)
 ├── Resources/
 │   ├── icon_30x30.png                 # Small 30x30 launcher icon
 │   └── icon_60x60.png                 # Main 60x60 menu icon
@@ -133,4 +133,4 @@ cmake --build build -j8
 ```
 
 The compiled binary package will be produced at:
-`Output/FreshBreath_0.0.0-dev.uapp`
+`Output/FreshBreath_1.0.0.uapp`
