@@ -3,24 +3,24 @@
 <p align="center">
   <img src="Resources/icon_512x512.png" width="140" height="140" alt="FreshBreath App Icon" /><br/>
   <b>Mindful Breathing & Meditation Activity for UNA Watch</b><br/>
-  <code>App ID: 432197B5C95258BF</code> • <code>Version: v1.0.0</code> • <code>Type: Activity</code>
+  <code>App ID: 432197B5C95258BF</code> • <code>Version: v1.0.1</code> • <code>Type: Activity</code>
 </p>
 
 ---
 
-## 📸 Device Screenshots
+## 📸 Device Screenshots (v1.0.1)
 
 Official UNA Watch photorealistic mockups rendered across **Teal**, **Black**, and **White** case finishes:
 
-| Main Screen (Teal Watch) | Pattern Selection (Black Watch) | Inhale Phase (White Watch) |
-| :---: | :---: | :---: |
-| <img src="assets/screenshots/screenshot_01_main_teal.png" width="280" alt="FreshBreath Main Screen" /> | <img src="assets/screenshots/screenshot_02_pattern_select_black.png" width="280" alt="Select Pattern" /> | <img src="assets/screenshots/screenshot_03_breath_inhale_white.png" width="280" alt="Inhale Phase" /> |
-| *Session setup & target duration* | *Box Breathing (4:4:4:4 Method)* | *Active expanding guide (68 bpm)* |
+| Main WheelMenu (Teal Watch) | Pattern Selector (Black Watch) | 5s Preparation (White Watch) | Inhale Phase (White Watch) |
+| :---: | :---: | :---: | :---: |
+| <img src="assets/screenshots/screenshot_01_main_teal.png" width="210" alt="FreshBreath Main Screen" /> | <img src="assets/screenshots/screenshot_02_pattern_select_black.png" width="210" alt="Select Pattern" /> | <img src="assets/screenshots/screenshot_03_countdown_white.png" width="210" alt="5s Preparation Countdown" /> | <img src="assets/screenshots/screenshot_04_breath_inhale_white.png" width="210" alt="Inhale Phase" /> |
+| *Start, Pattern, Duration, Alert Mode & Summary* | *Box Breathing (4:4:4:4 Method)* | *5-second countdown with TimerRing* | *Centered HR + expanding cyan arc* |
 
-| Hold Phase (Teal Watch) | Exhale Phase (Black Watch) | Workout Summary (White Watch) |
-| :---: | :---: | :---: |
-| <img src="assets/screenshots/screenshot_04_breath_hold_teal.png" width="280" alt="Hold Phase" /> | <img src="assets/screenshots/screenshot_05_breath_exhale_black.png" width="280" alt="Exhale Phase" /> | <img src="assets/screenshots/screenshot_06_summary_white.png" width="280" alt="Summary Screen" /> |
-| *Yellow retention circle ring* | *Contracting sky-blue guide* | *FIT workout saved with metrics* |
+| Hold Phase (Teal Watch) | Exhale Phase (Black Watch) | 3s Hold Confirm (Teal Watch) | Workout Summary (White Watch) |
+| :---: | :---: | :---: | :---: |
+| <img src="assets/screenshots/screenshot_05_breath_hold_teal.png" width="210" alt="Hold Phase" /> | <img src="assets/screenshots/screenshot_06_breath_exhale_black.png" width="210" alt="Exhale Phase" /> | <img src="assets/screenshots/screenshot_07_hold_confirm_teal.png" width="210" alt="3s Hold to Finish" /> | <img src="assets/screenshots/screenshot_08_summary_white.png" width="210" alt="Summary Screen" /> |
+| *Yellow retention circle ring* | *Contracting sky-blue guide* | *3s R1 hold-to-confirm Save / Discard* | *2-page recap with duration, cycles & HR* |
 
 ---
 

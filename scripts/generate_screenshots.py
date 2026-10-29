@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Generate pixel-accurate watch UI screens and composite photorealistic device mockups
-for FreshBreath using the official UNA Watch Penpot templates and Poppins fonts.
+Generate pixel-accurate watch UI screens (v1.0.1 WheelMenu + TimerRing UI)
+and composite photorealistic device mockups for FreshBreath using the official
+UNA Watch Penpot templates and Poppins fonts.
 """
 
 import math
@@ -14,71 +15,142 @@ MOCKUP_DIR = "assets/mockups"
 SCREENSHOT_DIR = "assets/screenshots"
 PREVIEW_DIR = "assets/previews"
 
-# Typography helpers
+
 def get_font(name: str, size: int):
     path = os.path.join(FONT_DIR, f"{name}.ttf")
     if os.path.exists(path):
         return ImageFont.truetype(path, size)
     return ImageFont.load_default()
 
-# Colors (Hex codes aligned with SDK::GUI::Color)
+
+# Colors aligned with Theme::Color (RGB888)
 COLOR_BLACK       = (0, 0, 0, 255)
 COLOR_WHITE       = (255, 255, 255, 255)
-COLOR_GRAY        = (142, 142, 147, 255)
-COLOR_GRAY_DARK   = (44, 44, 46, 255)
+COLOR_GRAY_LIGHT  = (170, 170, 170, 255)
+COLOR_GRAY_DARK   = (102, 102, 102, 255)
+COLOR_CARD_BG     = (34, 34, 34, 255)
+COLOR_RING_BG     = (32, 32, 32, 255)
 COLOR_CYAN_PURE   = (0, 229, 255, 255)
 COLOR_AQUA        = (0, 176, 255, 255)
 COLOR_SKY         = (79, 195, 247, 255)
-COLOR_TEAL_DARK   = (0, 77, 64, 255)
 COLOR_GREEN       = (64, 192, 0, 255)
-COLOR_AMBER       = (192, 128, 0, 255)
+COLOR_AMBER       = (255, 171, 0, 255)
 COLOR_YELLOW      = (255, 214, 0, 255)
-COLOR_RED         = (255, 59, 48, 255)
+COLOR_RED         = (255, 64, 64, 255)
 
-# Hardware button angles (TouchGFX: 0 = 12 o'clock, clockwise)
-# PIL: 0 = 3 o'clock, clockwise -> angle_pil = angle_tg - 90
+# Hardware button angles (0 = 12 o'clock clockwise -> PIL: angle - 90)
 BUTTON_ARCS = {
-    'L1': (291 - 90, 308 - 90), # 201 to 218
-    'L2': (232 - 90, 249 - 90), # 142 to 159
-    'R1': (52 - 90, 69 - 90),   # -38 to -21 (322 to 339)
-    'R2': (112 - 90, 128 - 90), # 22 to 38
+    'L1': (291 - 90, 308 - 90),
+    'L2': (232 - 90, 249 - 90),
+    'R1': (52 - 90, 69 - 90),
+    'R2': (112 - 90, 128 - 90),
 }
+
 
 def draw_hardware_buttons(draw: ImageDraw.ImageDraw, scale: float, buttons: dict):
     cx, cy = 120 * scale, 120 * scale
-    radius = 113 * scale
-    width = int(round(6 * scale))
+    radius = 115 * scale
+    width = int(round(5 * scale))
     bbox = [cx - radius, cy - radius, cx + radius, cy + radius]
     for key, color in buttons.items():
         if color and key in BUTTON_ARCS:
             start, end = BUTTON_ARCS[key]
             draw.arc(bbox, start=start, end=end, fill=color, width=width)
 
+
+def draw_title_bar(draw: ImageDraw.ImageDraw, scale: float, title: str, time_str: str = "10:08"):
+    f_reg_14 = get_font("Poppins-Regular", int(14 * scale))
+    f_semi_16 = get_font("Poppins-SemiBold", int(16 * scale))
+    cx = 120 * scale
+
+    # Time + battery row at top (y=8)
+    tb = draw.textbbox((0, 0), time_str, font=f_reg_14)
+    tw = tb[2] - tb[0]
+    draw.text((cx - tw / 2 - 10 * scale, 7 * scale), time_str, font=f_reg_14, fill=COLOR_GRAY_LIGHT)
+
+    # Small battery icon next to time
+    bx = cx + tw / 2 - 4 * scale
+    by = 10 * scale
+    bw, bh = 16 * scale, 9 * scale
+    draw.rounded_rectangle([bx, by, bx + bw, by + bh], radius=2 * scale, outline=COLOR_GRAY_LIGHT, width=max(1, int(1.2 * scale)))
+    draw.rectangle([bx + bw, by + 2.5 * scale, bx + bw + 2 * scale, by + bh - 2.5 * scale], fill=COLOR_GRAY_LIGHT)
+    draw.rectangle([bx + 2 * scale, by + 2 * scale, bx + bw - 3 * scale, by + bh - 2 * scale], fill=COLOR_GREEN)
+
+    # Title label (y=24)
+    ttb = draw.textbbox((0, 0), title, font=f_semi_16)
+    ttw = ttb[2] - ttb[0]
+    draw.text((cx - ttw / 2, 24 * scale), title, font=f_semi_16, fill=COLOR_WHITE)
+
+
+def draw_wheel_menu(draw: ImageDraw.ImageDraw, scale: float,
+                    prev_title: str, curr_title: str, curr_sub: str, next_title: str,
+                    accent_color=COLOR_CYAN_PURE):
+    f_reg_16 = get_font("Poppins-Regular", int(16 * scale))
+    f_semi_20 = get_font("Poppins-SemiBold", int(20 * scale))
+    f_reg_14 = get_font("Poppins-Regular", int(14 * scale))
+    cx = 120 * scale
+
+    # Previous item (top, dimmed)
+    if prev_title:
+        pb = draw.textbbox((0, 0), prev_title, font=f_reg_16)
+        draw.text((cx - (pb[2] - pb[0]) / 2, 55 * scale), prev_title, font=f_reg_16, fill=COLOR_GRAY_DARK)
+
+    # Center selected pill card (x=14..226, y=88..154)
+    pill_rect = [14 * scale, 88 * scale, 226 * scale, 154 * scale]
+    draw.rounded_rectangle(pill_rect, radius=16 * scale, fill=COLOR_CARD_BG, outline=(58, 58, 60, 255), width=int(1.5 * scale))
+
+    # Left accent bar inside pill
+    bar_rect = [22 * scale, 100 * scale, 26 * scale, 142 * scale]
+    draw.rounded_rectangle(bar_rect, radius=2 * scale, fill=accent_color)
+
+    # Selected title + subtitle
+    if curr_sub:
+        cb = draw.textbbox((0, 0), curr_title, font=f_semi_20)
+        draw.text((cx - (cb[2] - cb[0]) / 2, 95 * scale), curr_title, font=f_semi_20, fill=COLOR_WHITE)
+        sb = draw.textbbox((0, 0), curr_sub, font=f_reg_14)
+        draw.text((cx - (sb[2] - sb[0]) / 2, 126 * scale), curr_sub, font=f_reg_14, fill=accent_color)
+    else:
+        cb = draw.textbbox((0, 0), curr_title, font=f_semi_20)
+        draw.text((cx - (cb[2] - cb[0]) / 2, 108 * scale), curr_title, font=f_semi_20, fill=COLOR_WHITE)
+
+    # Next item (bottom, dimmed)
+    if next_title:
+        nb = draw.textbbox((0, 0), next_title, font=f_reg_16)
+        draw.text((cx - (nb[2] - nb[0]) / 2, 168 * scale), next_title, font=f_reg_16, fill=COLOR_GRAY_DARK)
+
+
+def draw_timer_ring(draw: ImageDraw.ImageDraw, scale: float, permille: int, color):
+    cx, cy = 120 * scale, 120 * scale
+    r = 109 * scale
+    w = int(6 * scale)
+    bbox = [cx - r, cy - r, cx + r, cy + r]
+    draw.arc(bbox, start=0, end=360, fill=COLOR_RING_BG, width=w)
+    if permille > 0:
+        end_deg = -90 + (360.0 * permille / 1000.0)
+        draw.arc(bbox, start=-90, end=end_deg, fill=color, width=w)
+
+
 def draw_heart_icon(draw: ImageDraw.ImageDraw, cx: float, cy: float, size: float, color):
-    # Vector heart shape
     points = []
     steps = 40
     for i in range(steps):
         t = i * 2.0 * math.pi / steps
         x = 16 * (math.sin(t) ** 3)
-        y = -(13 * math.cos(t) - 5 * math.cos(2*t) - 2 * math.cos(3*t) - math.cos(4*t))
-        # scale down
+        y = -(13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t))
         s = size / 36.0
         points.append((cx + x * s, cy + y * s))
     draw.polygon(points, fill=color)
 
-def draw_checkmark(draw: ImageDraw.ImageDraw, cx: float, cy: float, size: float, color):
-    # Vector checkmark
-    w = max(2, int(size * 0.15))
-    p1 = (cx - size * 0.45, cy)
-    p2 = (cx - size * 0.1, cy + size * 0.35)
-    p3 = (cx + size * 0.45, cy - size * 0.35)
-    draw.line([p1, p2, p3], fill=color, width=w, joint='curve')
+
+def draw_pause_bars(draw: ImageDraw.ImageDraw, cx: float, cy: float, scale: float, color):
+    w = 4 * scale
+    h = 14 * scale
+    gap = 3 * scale
+    draw.rounded_rectangle([cx - gap - w, cy - h / 2, cx - gap, cy + h / 2], radius=1.5 * scale, fill=color)
+    draw.rounded_rectangle([cx + gap, cy - h / 2, cx + gap + w, cy + h / 2], radius=1.5 * scale, fill=color)
+
 
 def render_screen(screen_type: str, scale: float = 4.0) -> Image.Image:
-    """
-    Renders 240x240 screen at the given scale for antialiasing.
-    """
     dim = int(240 * scale)
     img = Image.new("RGBA", (dim, dim), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -86,14 +158,12 @@ def render_screen(screen_type: str, scale: float = 4.0) -> Image.Image:
     # Base black circular display
     draw.ellipse([0, 0, dim - 1, dim - 1], fill=(0, 0, 0, 255))
 
-    # Helper fonts
     f_reg_14 = get_font("Poppins-Regular", int(14 * scale))
     f_reg_16 = get_font("Poppins-Regular", int(16 * scale))
     f_semi_20 = get_font("Poppins-SemiBold", int(20 * scale))
     f_semi_25 = get_font("Poppins-SemiBold", int(25 * scale))
     f_semi_35 = get_font("Poppins-SemiBold", int(35 * scale))
-    f_semi_40 = get_font("Poppins-SemiBold", int(40 * scale))
-    f_italic_18 = get_font("Poppins-Italic", int(18 * scale))
+    f_semi_48 = get_font("Poppins-SemiBold", int(48 * scale))
 
     cx = 120 * scale
     cy = 120 * scale
@@ -103,121 +173,144 @@ def render_screen(screen_type: str, scale: float = 4.0) -> Image.Image:
         w = bbox[2] - bbox[0]
         draw.text((cx - w / 2, y * scale), text, font=font, fill=color)
 
-    def draw_rounded_card(x: float, y: float, w: float, h: float, radius: float, bg_color):
-        rect = [x * scale, y * scale, (x + w) * scale, (y + h) * scale]
-        draw.rounded_rectangle(rect, radius=radius * scale, fill=bg_color)
-
     if screen_type == "main":
         draw_hardware_buttons(draw, scale, {
             'L1': COLOR_WHITE,
-            'L2': COLOR_AMBER,
-            'R1': COLOR_GREEN,
-            'R2': COLOR_AMBER
+            'L2': COLOR_WHITE,
+            'R1': COLOR_CYAN_PURE,
+            'R2': COLOR_WHITE,
         })
-        draw_text_center("FRESH BREATH", 15, f_semi_20, COLOR_CYAN_PURE)
-        draw_text_center("10:08", 38, f_reg_14, COLOR_GRAY)
-
-        # Pattern Card
-        draw_rounded_card(20, 62, 200, 72, 8, (0, 77, 64, 128))
-        draw_text_center("PATTERN [L2]", 68, f_reg_14, COLOR_AQUA)
-        draw_text_center("Box 4-4-4-4", 86, f_semi_20, COLOR_WHITE)
-        draw_text_center("4s : 4s : 4s : 4s", 110, f_reg_14, COLOR_GRAY)
-
-        # Duration Card
-        draw_rounded_card(20, 140, 200, 46, 8, (44, 44, 46, 120))
-        draw_text_center("DURATION [R2]", 144, f_reg_14, COLOR_AMBER)
-        draw_text_center("5 min", 162, f_semi_20, COLOR_WHITE)
-
-        # Start Prompt
-        draw_text_center("Press R1 to Start", 198, f_semi_20, COLOR_GREEN)
+        draw_title_bar(draw, scale, "Fresh Breath")
+        draw_wheel_menu(
+            draw, scale,
+            prev_title="Alert Mode",
+            curr_title="Start Breath",
+            curr_sub="Box 4-4-4-4",
+            next_title="Pattern",
+            accent_color=COLOR_CYAN_PURE,
+        )
 
     elif screen_type == "pattern_select":
         draw_hardware_buttons(draw, scale, {
             'L1': COLOR_WHITE,
             'L2': COLOR_WHITE,
             'R1': COLOR_GREEN,
-            'R2': COLOR_RED
+            'R2': COLOR_WHITE,
         })
-        draw_text_center("SELECT PATTERN", 15, f_reg_14, COLOR_GRAY)
+        draw_title_bar(draw, scale, "Pattern")
+        draw_wheel_menu(
+            draw, scale,
+            prev_title="Equal Flow",
+            curr_title="Box 4-4-4-4",
+            curr_sub="[Active] 4-4-4-4s",
+            next_title="4-7-8 Relax",
+            accent_color=COLOR_GREEN,
+        )
 
-        # Pattern Details Card
-        draw_rounded_card(15, 38, 210, 150, 10, (0, 77, 64, 100))
-        draw_text_center("Box 4-4-4-4", 48, f_semi_25, COLOR_CYAN_PURE)
-        draw_text_center("4 : 4 : 4 : 4", 80, f_semi_20, COLOR_WHITE)
-        draw_text_center("Inhale · Hold · Exhale · Hold", 110, f_reg_14, COLOR_AQUA)
-        draw_text_center("Focus & Acute Stress Reset", 146, f_italic_18, COLOR_YELLOW)
+    elif screen_type == "countdown":
+        draw_hardware_buttons(draw, scale, {
+            'R1': COLOR_AMBER,
+            'R2': COLOR_WHITE,
+        })
+        draw_timer_ring(draw, scale, 800, COLOR_CYAN_PURE)
+        f_med_18 = get_font("Poppins-Medium", int(18 * scale))
+        f_italic_18 = get_font("Poppins-Italic", int(18 * scale))
+        f_semi_60 = get_font("Poppins-SemiBold", int(60 * scale))
 
-        # Navigation hint
-        draw_text_center("L1/L2: Change • R1: Select", 198, f_reg_14, COLOR_GRAY)
+        # Horizontal separator lines
+        draw.line([(35 * scale, 81 * scale), (205 * scale, 81 * scale)], fill=(58, 58, 60, 255), width=max(1, int(1.5 * scale)))
+        draw.line([(35 * scale, 113 * scale), (205 * scale, 113 * scale)], fill=(58, 58, 60, 255), width=max(1, int(1.5 * scale)))
+
+        # Tick icon at (178, 62) and Cross icon at (180, 162)
+        draw.line([(178 * scale, 69 * scale), (184 * scale, 75 * scale), (195 * scale, 62 * scale)],
+                  fill=COLOR_GREEN, width=max(2, int(2.5 * scale)))
+        draw.line([(180 * scale, 162 * scale), (192 * scale, 174 * scale)], fill=COLOR_WHITE, width=max(2, int(2.2 * scale)))
+        draw.line([(192 * scale, 162 * scale), (180 * scale, 174 * scale)], fill=COLOR_WHITE, width=max(2, int(2.2 * scale)))
+
+        draw_text_center("Box 4-4-4-4", 53, f_semi_20, COLOR_CYAN_PURE)
+        draw_text_center("5 min", 85, f_med_18, COLOR_WHITE)
+        draw_text_center("Get Ready", 117, f_italic_18, COLOR_GRAY_LIGHT)
+        draw_text_center("5", 138, f_semi_60, COLOR_WHITE)
 
     elif screen_type.startswith("breath_"):
         draw_hardware_buttons(draw, scale, {
-            'L1': COLOR_RED,
             'R1': COLOR_AMBER,
-            'R2': COLOR_GREEN
+            'R2': COLOR_WHITE,
         })
-        # Background arc ring
-        arc_r = 95 * scale
+        arc_r = 102 * scale
         arc_bbox = [cx - arc_r, cy - arc_r, cx + arc_r, cy + arc_r]
-        draw.arc(arc_bbox, start=0, end=360, fill=(0, 56, 64, 255), width=int(8 * scale))
+        draw.arc(arc_bbox, start=0, end=360, fill=COLOR_RING_BG, width=int(10 * scale))
 
         if screen_type == "breath_inhale":
-            # Active Cyan arc (0 to 90 degrees, angle relative to 12 o'clock: -90 to 0 in PIL)
-            draw.arc(arc_bbox, start=-90, end=0, fill=COLOR_CYAN_PURE, width=int(10 * scale))
-            # Header
-            draw_heart_icon(draw, 36 * scale, 42 * scale, 20 * scale, COLOR_RED)
-            draw.text((54 * scale, 33 * scale), "68 bpm", font=f_reg_16, fill=COLOR_WHITE)
-            bbox = draw.textbbox((0, 0), "Cycle 1", font=f_reg_16)
-            draw.text(((216 * scale) - (bbox[2] - bbox[0]), 33 * scale), "Cycle 1", font=f_reg_16, fill=COLOR_AQUA)
-
-            draw_text_center("INHALE", 78, f_semi_35, COLOR_CYAN_PURE)
-            draw_text_center("4", 122, f_semi_40, COLOR_WHITE)
-            draw_text_center("00:01", 185, f_reg_16, COLOR_GRAY)
+            draw.arc(arc_bbox, start=-90, end=15, fill=COLOR_CYAN_PURE, width=int(10 * scale))
+            draw_heart_icon(draw, 98 * scale, 48 * scale, 16 * scale, COLOR_RED)
+            draw.text((112 * scale, 35 * scale), "68", font=f_semi_20, fill=COLOR_WHITE)
+            draw_text_center("INHALE", 76, f_semi_35, COLOR_CYAN_PURE)
+            draw_text_center("4", 116, f_semi_48, COLOR_WHITE)
+            draw_text_center("00:42 / 05:00", 176, f_reg_16, COLOR_GRAY_LIGHT)
+            draw_text_center("Cycle 3", 198, f_reg_14, COLOR_AQUA)
 
         elif screen_type == "breath_hold":
-            # Full glowing yellow/amber arc
             draw.arc(arc_bbox, start=0, end=360, fill=COLOR_YELLOW, width=int(10 * scale))
-            # Header
-            draw_heart_icon(draw, 36 * scale, 42 * scale, 20 * scale, COLOR_RED)
-            draw.text((54 * scale, 33 * scale), "64 bpm", font=f_reg_16, fill=COLOR_WHITE)
-            bbox = draw.textbbox((0, 0), "Cycle 3", font=f_reg_16)
-            draw.text(((216 * scale) - (bbox[2] - bbox[0]), 33 * scale), "Cycle 3", font=f_reg_16, fill=COLOR_AQUA)
-
-            draw_text_center("HOLD", 78, f_semi_35, COLOR_YELLOW)
-            draw_text_center("3", 122, f_semi_40, COLOR_WHITE)
-            draw_text_center("00:39", 185, f_reg_16, COLOR_GRAY)
+            draw_heart_icon(draw, 98 * scale, 48 * scale, 16 * scale, COLOR_RED)
+            draw.text((112 * scale, 35 * scale), "64", font=f_semi_20, fill=COLOR_WHITE)
+            draw_text_center("HOLD", 76, f_semi_35, COLOR_YELLOW)
+            draw_text_center("3", 116, f_semi_48, COLOR_WHITE)
+            draw_text_center("01:18 / 05:00", 176, f_reg_16, COLOR_GRAY_LIGHT)
+            draw_text_center("Cycle 5", 198, f_reg_14, COLOR_AQUA)
 
         elif screen_type == "breath_exhale":
-            # Contracting Sky Blue arc (-90 to 90 degrees)
-            draw.arc(arc_bbox, start=-90, end=90, fill=COLOR_SKY, width=int(10 * scale))
-            # Header
-            draw_heart_icon(draw, 36 * scale, 42 * scale, 20 * scale, COLOR_RED)
-            draw.text((54 * scale, 33 * scale), "61 bpm", font=f_reg_16, fill=COLOR_WHITE)
-            bbox = draw.textbbox((0, 0), "Cycle 7", font=f_reg_16)
-            draw.text(((216 * scale) - (bbox[2] - bbox[0]), 33 * scale), "Cycle 7", font=f_reg_16, fill=COLOR_AQUA)
+            draw.arc(arc_bbox, start=-90, end=110, fill=COLOR_SKY, width=int(10 * scale))
+            draw_heart_icon(draw, 98 * scale, 48 * scale, 16 * scale, COLOR_RED)
+            draw.text((112 * scale, 35 * scale), "61", font=f_semi_20, fill=COLOR_WHITE)
+            draw_text_center("EXHALE", 76, f_semi_35, COLOR_SKY)
+            draw_text_center("2", 116, f_semi_48, COLOR_WHITE)
+            draw_text_center("02:45 / 05:00", 176, f_reg_16, COLOR_GRAY_LIGHT)
+            draw_text_center("Cycle 11", 198, f_reg_14, COLOR_AQUA)
 
-            draw_text_center("EXHALE", 78, f_semi_35, COLOR_SKY)
-            draw_text_center("2", 122, f_semi_40, COLOR_WHITE)
-            draw_text_center("01:42", 185, f_reg_16, COLOR_GRAY)
+    elif screen_type == "hold_confirm":
+        draw_hardware_buttons(draw, scale, {
+            'R1': COLOR_GREEN,
+        })
+        draw_timer_ring(draw, scale, 666, COLOR_GREEN)
+        f_med_18 = get_font("Poppins-Medium", int(18 * scale))
+        f_semi_60 = get_font("Poppins-SemiBold", int(60 * scale))
+        draw.line([(178 * scale, 69 * scale), (184 * scale, 75 * scale), (195 * scale, 62 * scale)],
+                  fill=COLOR_GREEN, width=max(2, int(2.5 * scale)))
+        draw_text_center("Hold to", 62, f_med_18, COLOR_WHITE)
+        draw_text_center("Finish", 82, f_med_18, COLOR_WHITE)
+        draw_text_center("2", 108, f_semi_60, COLOR_WHITE)
 
     elif screen_type == "summary":
         draw_hardware_buttons(draw, scale, {
-            'R1': COLOR_GREEN
+            'R1': COLOR_AMBER,
+            'R2': COLOR_WHITE,
         })
-        draw_checkmark(draw, cx, 20 * scale, 22 * scale, COLOR_GREEN)
-        draw_text_center("WORKOUT SAVED", 32, f_reg_14, COLOR_AQUA)
-        draw_text_center("Breathwork - 4:4:4:4", 48, f_semi_20, COLOR_CYAN_PURE)
+        draw_title_bar(draw, scale, "SUMMARY")
+        f_italic_18 = get_font("Poppins-Italic", int(18 * scale))
+        draw_text_center("Box 4-4-4-4", 48, f_semi_20, COLOR_CYAN_PURE)
+        draw_text_center("05:00", 76, f_semi_35, COLOR_WHITE)
+        draw_text_center("Duration", 114, f_italic_18, COLOR_GRAY_LIGHT)
 
-        # Summary Card
-        draw_rounded_card(15, 72, 210, 116, 8, (0, 77, 64, 80))
-        draw_text_center("05:00", 78, f_semi_25, COLOR_WHITE)
-        draw_text_center("18 Cycles Completed", 108, f_reg_16, COLOR_AQUA)
-        draw_text_center("Avg HR: 62 bpm", 136, f_reg_14, COLOR_WHITE)
-        draw_text_center("Calories: 28 kcal", 160, f_reg_14, COLOR_GRAY)
+        draw.line([(30 * scale, 140 * scale), (210 * scale, 140 * scale)], fill=(58, 58, 60, 255), width=max(1, int(1.5 * scale)))
 
-        draw_text_center("Press R1 to Finish", 198, f_semi_20, COLOR_GREEN)
+        # Left column: Cycles
+        b1 = draw.textbbox((0, 0), "19", font=f_semi_25)
+        draw.text(((68 * scale) - (b1[2] - b1[0]) / 2, 148 * scale), "19", font=f_semi_25, fill=COLOR_AQUA)
+        b2 = draw.textbbox((0, 0), "Cycles", font=f_italic_18)
+        draw.text(((68 * scale) - (b2[2] - b2[0]) / 2, 178 * scale), "Cycles", font=f_italic_18, fill=COLOR_GRAY_LIGHT)
 
-    # Circular mask to ensure strict circular boundary
+        # Right column: Avg HR
+        b3 = draw.textbbox((0, 0), "62", font=f_semi_25)
+        draw.text(((172 * scale) - (b3[2] - b3[0]) / 2, 148 * scale), "62", font=f_semi_25, fill=COLOR_WHITE)
+        b4 = draw.textbbox((0, 0), "Avg HR", font=f_italic_18)
+        draw.text(((172 * scale) - (b4[2] - b4[0]) / 2, 178 * scale), "Avg HR", font=f_italic_18, fill=COLOR_GRAY_LIGHT)
+
+        # ScrollIndicator on right side (x=222)
+        draw.ellipse([219 * scale, 110 * scale, 225 * scale, 116 * scale], fill=COLOR_CYAN_PURE)
+        draw.ellipse([220 * scale, 124 * scale, 224 * scale, 128 * scale], fill=COLOR_GRAY_DARK)
+
+    # Circular mask
     mask = Image.new("L", (dim, dim), 0)
     mask_draw = ImageDraw.Draw(mask)
     mask_draw.ellipse([0, 0, dim - 1, dim - 1], fill=255)
@@ -225,59 +318,52 @@ def render_screen(screen_type: str, scale: float = 4.0) -> Image.Image:
 
     return img
 
+
 def composite_mockup(screen_img: Image.Image, watch_case: str) -> Image.Image:
-    """
-    Composites the circular screen into the 2000x2000 watch frame underneath the bezel.
-    Center is at (1000, 1010), diameter is 734 px.
-    """
     watch_path = os.path.join(MOCKUP_DIR, f"watch_{watch_case}.png")
     watch_img = Image.open(watch_path).convert("RGBA")
-
-    # Resize screen cleanly to 734 x 734 using high-quality Lanczos resampling
     screen_resized = screen_img.resize((734, 734), Image.Resampling.LANCZOS)
 
-    # Create composite canvas
     canvas = Image.new("RGBA", (2000, 2000), (0, 0, 0, 0))
-    # Paste screen at center (1000 - 367, 1010 - 367) = (633, 643)
     canvas.paste(screen_resized, (633, 643), screen_resized)
-
-    # Overlay watch mockup on top (the bezel and glass reflections overlay the screen)
     canvas.alpha_composite(watch_img)
     return canvas
+
 
 def main():
     os.makedirs(SCREENSHOT_DIR, exist_ok=True)
     os.makedirs(PREVIEW_DIR, exist_ok=True)
 
     configs = [
-        ("01_main_teal",            "main",           "teal",  "Main Screen (Teal Watch)"),
-        ("02_pattern_select_black", "pattern_select", "black", "Pattern Selection Screen (Black Watch)"),
-        ("03_breath_inhale_white",  "breath_inhale",  "white", "Active Breathing Inhale (White Watch)"),
-        ("04_breath_hold_teal",     "breath_hold",    "teal",  "Active Breathing Hold (Teal Watch)"),
-        ("05_breath_exhale_black",  "breath_exhale",  "black", "Active Breathing Exhale (Black Watch)"),
-        ("06_summary_white",        "summary",        "white", "Workout Summary Screen (White Watch)"),
+        ("01_main_teal",            "main",           "teal",  "Main WheelMenu Screen (Teal Watch)"),
+        ("02_pattern_select_black", "pattern_select", "black", "Pattern Selection WheelMenu (Black Watch)"),
+        ("03_countdown_white",      "countdown",      "white", "5s Preparation Countdown (White Watch)"),
+        ("04_breath_inhale_white",  "breath_inhale",  "white", "Active Breathing Inhale (White Watch)"),
+        ("05_breath_hold_teal",     "breath_hold",    "teal",  "Active Breathing Hold (Teal Watch)"),
+        ("06_breath_exhale_black",  "breath_exhale",  "black", "Active Breathing Exhale (Black Watch)"),
+        ("07_hold_confirm_teal",    "hold_confirm",   "teal",  "3s Hold Confirm Save & End (Teal Watch)"),
+        ("08_summary_white",        "summary",        "white", "Workout Summary Screen (White Watch)"),
+        # Keep legacy filename alias for backwards compatibility
+        ("03_breath_inhale_white",  "breath_inhale",  "white", "Legacy Alias Inhale"),
+        ("04_breath_hold_teal",     "breath_hold",    "teal",  "Legacy Alias Hold"),
+        ("05_breath_exhale_black",  "breath_exhale",  "black", "Legacy Alias Exhale"),
+        ("06_summary_white",        "summary",        "white", "Legacy Alias Summary"),
     ]
 
     for filename, screen_type, watch_case, title in configs:
-        print(f"Generating {title}...")
-        # 1. Render high-resolution screen (4x supersampled = 960x960)
+        print(f"Generating {title} -> {filename}...")
         hi_screen = render_screen(screen_type, scale=4.0)
 
-        # 2. Save 240x240 preview
         preview_240 = hi_screen.resize((240, 240), Image.Resampling.LANCZOS)
         preview_path = os.path.join(PREVIEW_DIR, f"{filename}.png")
         preview_240.save(preview_path, "PNG")
 
-        # 3. Composite into 2000x2000 device mockup
         mockup_img = composite_mockup(hi_screen, watch_case)
-
-        # Also save web-optimized 1000x1000 screenshot alongside 2000x2000 full-res
         mockup_path = os.path.join(SCREENSHOT_DIR, f"screenshot_{filename}.png")
         mockup_img.save(mockup_path, "PNG", optimize=True)
 
-        print(f"  -> Saved {mockup_path} and {preview_path}")
+    print("\nAll v1.0.1 screenshots generated successfully!")
 
-    print("\nAll screenshots generated successfully!")
 
 if __name__ == "__main__":
     main()
