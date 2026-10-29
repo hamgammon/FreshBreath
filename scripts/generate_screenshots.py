@@ -11,9 +11,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 UNA_SDK = os.environ.get("UNA_SDK", os.path.expanduser("~/repos/una-sdk"))
 FONT_DIR = os.path.join(UNA_SDK, "Examples/Apps/Workout/Software/Apps/TouchGFX-GUI/assets/fonts")
-MOCKUP_DIR = "assets/mockups"
-SCREENSHOT_DIR = "assets/screenshots"
-PREVIEW_DIR = "assets/previews"
+MOCKUP_DIR = "Resources/mockups"
+SCREENSHOT_DIR = "Resources/screenshots"
+PREVIEW_DIR = "Resources/previews"
 
 
 def get_font(name: str, size: int):

@@ -14,12 +14,12 @@ Official UNA Watch photorealistic mockups rendered across **Teal**, **Black**, a
 
 | Main WheelMenu (Teal Watch) | Pattern Selector (Black Watch) | 5s Preparation (White Watch) | Inhale Phase (White Watch) |
 | :---: | :---: | :---: | :---: |
-| <img src="assets/screenshots/screenshot_01_main_teal.png" width="210" alt="FreshBreath Main Screen" /> | <img src="assets/screenshots/screenshot_02_pattern_select_black.png" width="210" alt="Select Pattern" /> | <img src="assets/screenshots/screenshot_03_countdown_white.png" width="210" alt="5s Preparation Countdown" /> | <img src="assets/screenshots/screenshot_04_breath_inhale_white.png" width="210" alt="Inhale Phase" /> |
+| <img src="Resources/screenshots/screenshot_01_main_teal.png" width="210" alt="FreshBreath Main Screen" /> | <img src="Resources/screenshots/screenshot_02_pattern_select_black.png" width="210" alt="Select Pattern" /> | <img src="Resources/screenshots/screenshot_03_countdown_white.png" width="210" alt="5s Preparation Countdown" /> | <img src="Resources/screenshots/screenshot_04_breath_inhale_white.png" width="210" alt="Inhale Phase" /> |
 | *Start, Pattern, Duration, Alert Mode & Summary* | *Box Breathing (4:4:4:4 Method)* | *5-second countdown with TimerRing* | *Centered HR + expanding cyan arc* |
 
 | Hold Phase (Teal Watch) | Exhale Phase (Black Watch) | 3s Hold Confirm (Teal Watch) | Workout Summary (White Watch) |
 | :---: | :---: | :---: | :---: |
-| <img src="assets/screenshots/screenshot_05_breath_hold_teal.png" width="210" alt="Hold Phase" /> | <img src="assets/screenshots/screenshot_06_breath_exhale_black.png" width="210" alt="Exhale Phase" /> | <img src="assets/screenshots/screenshot_07_hold_confirm_teal.png" width="210" alt="3s Hold to Finish" /> | <img src="assets/screenshots/screenshot_08_summary_white.png" width="210" alt="Summary Screen" /> |
+| <img src="Resources/screenshots/screenshot_05_breath_hold_teal.png" width="210" alt="Hold Phase" /> | <img src="Resources/screenshots/screenshot_06_breath_exhale_black.png" width="210" alt="Exhale Phase" /> | <img src="Resources/screenshots/screenshot_07_hold_confirm_teal.png" width="210" alt="3s Hold to Finish" /> | <img src="Resources/screenshots/screenshot_08_summary_white.png" width="210" alt="Summary Screen" /> |
 | *Yellow retention circle ring* | *Contracting sky-blue guide* | *3s R1 hold-to-confirm Save / Discard* | *2-page recap with duration, cycles & HR* |
 
 ---
@@ -89,16 +89,15 @@ The watch uses the 4 hardware bezel buttons, aligned with standard UNA Watch act
 
 ```
 FreshBreath/
-├── assets/
-│   ├── mockups/                       # Official Penpot UNA Watch device templates
-│   ├── previews/                      # Standalone 240x240 circular UI screens
-│   └── screenshots/                   # Device renders (Teal, Black, White)
 ├── Output/
-│   └── FreshBreath_1.0.0.uapp         # Packaged watch executable (v1.0.0, ID: 432197B5C95258BF)
+│   └── FreshBreath_1.0.1.uapp         # Packaged watch executable (v1.0.1, ID: 432197B5C95258BF)
 ├── Resources/
 │   ├── icon_512x512.png               # High-res store/marketing icon
 │   ├── icon_60x60.png                 # Main 60x60 launcher menu icon
-│   └── icon_30x30.png                 # Small 30x30 list/tray icon
+│   ├── icon_30x30.png                 # Small 30x30 list/tray icon
+│   ├── mockups/                       # Official Penpot UNA Watch device templates
+│   ├── previews/                      # Standalone 240x240 circular UI screens
+│   └── screenshots/                   # Device renders (Teal, Black, White)
 ├── scripts/
 │   ├── generate_icons.py              # Icon generation utility
 │   └── generate_screenshots.py        # Screen renderer & device mockup compositor
