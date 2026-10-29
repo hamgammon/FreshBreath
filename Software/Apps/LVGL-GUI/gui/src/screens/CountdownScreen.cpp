@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
  * @file    CountdownScreen.cpp
- * @brief   10-second preparation countdown screen implementation.
+ * @brief   5-second preparation countdown screen implementation.
  ******************************************************************************
  */
 
@@ -44,8 +44,8 @@ void CountdownScreen::build()
 
     mPattern = Theme::label(mRoot, F::SemiBold20, "", 35, 55, 145, LV_TEXT_ALIGN_CENTER, Color::TEAL);
     mRatio   = Theme::label(mRoot, F::Medium18,   "", 35, 87, 145, LV_TEXT_ALIGN_CENTER, Color::WHITE);
-    mTarget  = Theme::label(mRoot, F::Medium18,   "", 35, 119, 145, LV_TEXT_ALIGN_CENTER, Color::WHITE);
-    mCount   = Theme::label(mRoot, F::SemiBold60, "10", 70, 142, 100);
+    mTarget  = Theme::label(mRoot, F::Italic18,   "Get Ready", 35, 119, 145, LV_TEXT_ALIGN_CENTER, Color::GRAY);
+    mCount   = Theme::label(mRoot, F::SemiBold60, "5", 70, 142, 100);
 }
 
 void CountdownScreen::onShow()
@@ -58,18 +58,15 @@ void CountdownScreen::onShow()
 
     lv_label_set_text(mPattern, p.displayName);
 
-    char ratioBuf[32];
-    std::snprintf(ratioBuf, sizeof(ratioBuf), "Ratio %s", p.ratioLabel);
-    lv_label_set_text(mRatio, ratioBuf);
-
-    char targetBuf[32];
+    char timeBuf[24];
     if (s.targetDurationSec == 0) {
-        std::snprintf(targetBuf, sizeof(targetBuf), "Open Session");
+        std::snprintf(timeBuf, sizeof(timeBuf), "Open Session");
     } else {
-        std::snprintf(targetBuf, sizeof(targetBuf), "%u min • Get Ready",
+        std::snprintf(timeBuf, sizeof(timeBuf), "%u min",
                       static_cast<unsigned>(s.targetDurationSec / 60));
     }
-    lv_label_set_text(mTarget, targetBuf);
+    lv_label_set_text(mRatio, timeBuf);
+    lv_label_set_text(mTarget, "Get Ready");
 
     mRing->setProgress(1.0f);
 

@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
  * @file    CountdownScreen.hpp
- * @brief   10-second preparation countdown screen (modeled after RunLVGL).
+ * @brief   5-second preparation countdown screen (modeled after RunLVGL).
  ******************************************************************************
  */
 
@@ -25,8 +25,8 @@ protected:
     void build() override;
 
 private:
-    static constexpr uint32_t kTimeoutMs  = 10000;
-    static constexpr int32_t  kCountTicks = 10;
+    static constexpr uint32_t kTimeoutMs  = 5000;
+    static constexpr int32_t  kCountTicks = 5;
 
     static void animExecCb(void* var, int32_t value);
     static void animReadyCb(lv_anim_t* a);

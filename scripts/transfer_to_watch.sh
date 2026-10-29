@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-SOURCE_UAPP="/Users/scottcowie/repos/FreshBreath/Output/FreshBreath_1.0.0.uapp"
+UAPP_NAME="FreshBreath_1.0.1.uapp"
+SOURCE_UAPP="/Users/scottcowie/repos/FreshBreath/Output/${UAPP_NAME}"
 WATCH_VOL="/Volumes/UNA WATCH"
 TARGET_DIR="${WATCH_VOL}/Apps/FreshBreath"
 
@@ -26,7 +27,8 @@ done
 
 echo "Found watch drive at ${WATCH_VOL}!"
 mkdir -p "${TARGET_DIR}"
-echo "Copying FreshBreath_1.0.0.uapp to ${TARGET_DIR}..."
+rm -f "${TARGET_DIR}/FreshBreath_"*.uapp 2>/dev/null || true
+echo "Copying ${UAPP_NAME} to ${TARGET_DIR}..."
 cp "${SOURCE_UAPP}" "${TARGET_DIR}/"
 
 # Clean Apple Double resource files
@@ -36,13 +38,13 @@ rm -f "${TARGET_DIR}/._"* 2>/dev/null || true
 sync
 
 SRC_MD5=$(md5 -q "${SOURCE_UAPP}")
-DST_MD5=$(md5 -q "${TARGET_DIR}/FreshBreath_1.0.0.uapp")
+DST_MD5=$(md5 -q "${TARGET_DIR}/${UAPP_NAME}")
 
 echo "Source MD5: ${SRC_MD5}"
 echo "Watch  MD5: ${DST_MD5}"
 
 if [ "${SRC_MD5}" = "${DST_MD5}" ]; then
-    echo "SUCCESS: FreshBreath_1.0.0.uapp transferred and verified successfully!"
+    echo "SUCCESS: ${UAPP_NAME} transferred and verified successfully!"
     echo "You may now safely eject the watch drive and power-cycle the watch."
 else
     echo "ERROR: MD5 mismatch!"

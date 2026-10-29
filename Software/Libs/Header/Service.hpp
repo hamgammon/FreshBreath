@@ -2,7 +2,7 @@
  ******************************************************************************
  * @file    Service.hpp
  * @brief   FreshBreath Service process: tracks breathing session, records sensors,
- *          drives haptic pacing, and writes FIT / JSON workout data.
+ *          drives haptic/buzzer pacing, and writes FIT / JSON workout data.
  ******************************************************************************
  */
 
@@ -49,7 +49,9 @@ private:
     void handleSensorsData(uint16_t handle, SDK::Sensor::DataBatch& data);
 
     void playVibroPattern(SDK::Message::RequestVibroPlay::Effect effect,
-                          uint8_t count = 1, uint16_t silenceMs = 100);
+                          uint8_t count = 1, uint16_t silenceMs = 150);
+    void playBuzzerNotes(const SDK::Message::RequestBuzzerPlay::Note notes[],
+                         uint8_t count);
 
     void transitionToNextPhase();
     void triggerPhaseHaptic(FreshBreath::BreathPhase phase);

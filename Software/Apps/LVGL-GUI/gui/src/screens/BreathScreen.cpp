@@ -33,23 +33,23 @@ void BreathScreen::build()
     // Active animated breathing arc
     mBreathArc = Theme::arc(mRoot, 120, 120, 95, 10, 0, 0, SDK::GUI::Color::CYAN_PURE, true);
 
-    // Top metrics: HR and Cycle
-    mHrIcon = Theme::imageTinted(mRoot, &img_heart_30x30, 24, 28, SDK::GUI::Color::RED);
-    mHrLabel = Theme::label(mRoot, Theme::Font::Regular16, "--", 56, 34, 60,
+    // Top centered metric: Heart Rate
+    mHrIcon = Theme::imageTinted(mRoot, &img_heart_30x30, 88, 36, SDK::GUI::Color::RED);
+    mHrLabel = Theme::label(mRoot, Theme::Font::SemiBold20, "--", 122, 40, 48,
                             LV_TEXT_ALIGN_LEFT, SDK::GUI::Color::WHITE);
 
-    mCycleLabel = Theme::label(mRoot, Theme::Font::Regular16, "Cycle 1", 120, 34, 96,
-                               LV_TEXT_ALIGN_RIGHT, SDK::GUI::Color::AQUA);
-
     // Center breathing guide: Phase Name & Countdown
-    mPhaseLabel = Theme::label(mRoot, Theme::Font::SemiBold35, "INHALE", 0, 80, 240,
+    mPhaseLabel = Theme::label(mRoot, Theme::Font::SemiBold35, "INHALE", 0, 74, 240,
                                LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::CYAN_PURE);
 
-    mCountdownLabel = Theme::label(mRoot, Theme::Font::SemiBold40, "4", 0, 124, 240,
+    mCountdownLabel = Theme::label(mRoot, Theme::Font::SemiBold40, "4", 0, 114, 240,
                                    LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::WHITE);
 
-    // Bottom metrics: Elapsed / Target time
-    mTimerLabel = Theme::label(mRoot, Theme::Font::Regular16, "00:00", 0, 185, 240,
+    // Bottom centered metrics: Cycle & Elapsed / Target time
+    mCycleLabel = Theme::label(mRoot, Theme::Font::Regular16, "Cycle 1", 0, 160, 240,
+                               LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::AQUA);
+
+    mTimerLabel = Theme::label(mRoot, Theme::Font::Regular16, "00:00", 0, 180, 240,
                                LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
 
     // Paused overlay banner (initially hidden)

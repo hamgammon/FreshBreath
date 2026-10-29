@@ -109,10 +109,20 @@ void Service::run()
 
                 case CustomMessage::SETTINGS_SAVE: {
                     auto* req = static_cast<CustomMessage::SettingsSave*>(msg);
+                    const bool modeChanged = (mSettings.vibrateOnly != req->settings.vibrateOnly);
                     mSettings = req->settings;
                     mSettingsSerializer.save(mSettings);
-                    LOG_INFO("Settings saved: pattern=%u, dur=%u, haptics=%d\n",
-                             mSettings.selectedPatternIndex, mSettings.targetDurationSec, mSettings.hapticsEnabled);
+                    LOG_INFO("Settings saved: pattern=%u, dur=%u, vibrateOnly=%d\n",
+                             mSettings.selectedPatternIndex, mSettings.targetDurationSec, mSettings.vibrateOnly);
+                    if (modeChanged) {
+                        playVibroPattern(SDK::Message::RequestVibroPlay::Effect::STRONG_BUZZ_100, 1);
+                        if (!mSettings.vibrateOnly) {
+                            static const SDK::Message::RequestBuzzerPlay::Note kSampleBeep[] = {
+                                { 150, 100, 0, 1568 }
+                            };
+                            playBuzzerNotes(kSampleBeep, 1);
+                        }
+                    }
                 } break;
 
                 case SDK::MessageType::EVENT_SENSOR_LAYER_DATA: {
@@ -158,7 +168,6 @@ void Service::onStartGUI()
 {
     mGuiStarted = true;
 
-    // Send initial settings and latest summary
     bool tf12 = false;
     SDK::send_msg<CustomMessage::SettingsUpd>(mKernel, mSettings, tf12);
     SDK::send_msg<CustomMessage::SummaryUpd>(mKernel, mSummary);
@@ -223,7 +232,15 @@ void Service::pauseTrack()
     if (mTrackState == Track::State::ACTIVE) {
         mTrackState = Track::State::PAUSED;
         mActivityWriter.pause(std::time(nullptr));
-        playVibroPattern(SDK::Message::RequestVibroPlay::Effect::SHORT_DOUBLE_CLICK_MEDIUM_1_100, 1);
+        playVibroPattern(SDK::Message::RequestVibroPlay::Effect::STRONG_BUZZ_100, 2, 100);
+        if (!mSettings.vibrateOnly) {
+            static const SDK::Message::RequestBuzzerPlay::Note kPauseNotes[] = {
+                { 120, 100, 0, 1318 },
+                {  80,   0, 0, 1318 },
+                { 120, 100, 0, 1047 }
+            };
+            playBuzzerNotes(kPauseNotes, 3);
+        }
         SDK::send_msg<CustomMessage::TrackStateUpd>(mKernel, mTrackState);
     }
 }
@@ -285,7 +302,17 @@ void Service::stopTrack(bool discard)
     mActivitySummarySerializer.save(mSummary);
 
     mTrackState = Track::State::COMPLETED;
-    playVibroPattern(SDK::Message::RequestVibroPlay::Effect::ALERT_750MS_100, 2, 150);
+    playVibroPattern(SDK::Message::RequestVibroPlay::Effect::ALERT_750MS_100, 3, 200);
+    if (!mSettings.vibrateOnly) {
+        static const SDK::Message::RequestBuzzerPlay::Note kCompleteChime[] = {
+            { 300, 100, 0, 1318 },
+            { 120,   0, 0, 1318 },
+            { 300, 100, 0, 1568 },
+            { 120,   0, 0, 1568 },
+            { 400, 100, 0, 2093 }
+        };
+        playBuzzerNotes(kCompleteChime, 5);
+    }
 
     SDK::send_msg<CustomMessage::SummaryUpd>(mKernel, mSummary);
     SDK::send_msg<CustomMessage::TrackStateUpd>(mKernel, mTrackState);
@@ -376,29 +403,53 @@ void Service::transitionToNextPhase()
 
 void Service::triggerPhaseHaptic(FreshBreath::BreathPhase phase)
 {
-    if (!mSettings.hapticsEnabled) {
-        return;
-    }
-
     switch (phase) {
         case FreshBreath::BreathPhase::INHALE:
-            // Double click: prompt to inhale
-            playVibroPattern(SDK::Message::RequestVibroPlay::Effect::SHORT_DOUBLE_CLICK_STRONG_1_100, 1);
+            // Strong double 750ms pulse: prompt to inhale
+            playVibroPattern(SDK::Message::RequestVibroPlay::Effect::ALERT_750MS_100, 2, 150);
+            if (!mSettings.vibrateOnly) {
+                static const SDK::Message::RequestBuzzerPlay::Note kInhaleNotes[] = {
+                    { 180, 100, 0, 1318 },
+                    {  80,   0, 0, 1318 },
+                    { 220, 100, 0, 1760 }
+                };
+                playBuzzerNotes(kInhaleNotes, 3);
+            }
             break;
 
         case FreshBreath::BreathPhase::HOLD_IN:
-            // Soft bump: hold breath
-            playVibroPattern(SDK::Message::RequestVibroPlay::Effect::SOFT_BUMP_100, 1);
+            // Strong 750ms pulse: hold breath at top
+            playVibroPattern(SDK::Message::RequestVibroPlay::Effect::ALERT_750MS_100, 1);
+            if (!mSettings.vibrateOnly) {
+                static const SDK::Message::RequestBuzzerPlay::Note kHoldInNotes[] = {
+                    { 200, 100, 0, 1568 }
+                };
+                playBuzzerNotes(kHoldInNotes, 1);
+            }
             break;
 
         case FreshBreath::BreathPhase::EXHALE:
-            // Longer smooth buzz: exhale
-            playVibroPattern(SDK::Message::RequestVibroPlay::Effect::STRONG_BUZZ_100, 1);
+            // Long 1000ms full-power buzz: exhale
+            playVibroPattern(SDK::Message::RequestVibroPlay::Effect::ALERT_1000MS_100, 1);
+            if (!mSettings.vibrateOnly) {
+                static const SDK::Message::RequestBuzzerPlay::Note kExhaleNotes[] = {
+                    { 180, 100, 0, 1760 },
+                    {  80,   0, 0, 1760 },
+                    { 250, 100, 0, 1318 }
+                };
+                playBuzzerNotes(kExhaleNotes, 3);
+            }
             break;
 
         case FreshBreath::BreathPhase::HOLD_OUT:
-            // Soft bump: hold breath (empty)
-            playVibroPattern(SDK::Message::RequestVibroPlay::Effect::SOFT_BUMP_100, 1);
+            // Strong 750ms pulse: hold breath at bottom
+            playVibroPattern(SDK::Message::RequestVibroPlay::Effect::ALERT_750MS_100, 1);
+            if (!mSettings.vibrateOnly) {
+                static const SDK::Message::RequestBuzzerPlay::Note kHoldOutNotes[] = {
+                    { 200, 100, 0, 1047 }
+                };
+                playBuzzerNotes(kHoldOutNotes, 1);
+            }
             break;
     }
 }
@@ -406,22 +457,49 @@ void Service::triggerPhaseHaptic(FreshBreath::BreathPhase phase)
 void Service::playVibroPattern(SDK::Message::RequestVibroPlay::Effect effect,
                                uint8_t count, uint16_t silenceMs)
 {
-    const uint8_t maxCount = (SDK::Message::RequestVibroPlay::skMaxNotes + 1u) / 2u;
-    count = std::min(count, maxCount);
     if (count == 0) return;
+
+    const uint8_t maxCount = (SDK::Message::RequestVibroPlay::skMaxNotes + 1u) / 2u;
+    if (count > maxCount) {
+        count = maxCount;
+    }
 
     auto* msg = mKernel.comm.allocateMessage<SDK::Message::RequestVibroPlay>();
     if (!msg) return;
 
-    msg->notesCount = count * 2u - 1u;
-    for (uint8_t i = 0, n = 0; i < count; ++i) {
-        msg->notes[n++].effect = static_cast<uint8_t>(effect);
-        if (n < msg->notesCount) {
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < count; ++i) {
+        msg->notes[n].effect = static_cast<uint8_t>(effect);
+        msg->notes[n].pause  = 0;
+        ++n;
+        if (i < count - 1u) {
             msg->notes[n].effect = static_cast<uint8_t>(SDK::Message::RequestVibroPlay::Effect::NO_EFFECT);
-            msg->notes[n++].pause = silenceMs;
+            msg->notes[n].pause  = silenceMs;
+            ++n;
         }
     }
+    msg->notesCount = n;
     mKernel.comm.sendMessage(msg);
+    mKernel.comm.releaseMessage(msg);
+}
+
+void Service::playBuzzerNotes(const SDK::Message::RequestBuzzerPlay::Note notes[],
+                              uint8_t count)
+{
+    if (count == 0) return;
+    if (count > SDK::Message::RequestBuzzerPlay::skMaxNotes) {
+        count = SDK::Message::RequestBuzzerPlay::skMaxNotes;
+    }
+
+    auto* msg = mKernel.comm.allocateMessage<SDK::Message::RequestBuzzerPlay>();
+    if (!msg) return;
+
+    for (uint8_t i = 0; i < count; ++i) {
+        msg->notes[i] = notes[i];
+    }
+    msg->notesCount = count;
+    mKernel.comm.sendMessage(msg);
+    mKernel.comm.releaseMessage(msg);
 }
 
 void Service::connectSensors()

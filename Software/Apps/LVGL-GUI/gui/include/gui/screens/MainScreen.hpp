@@ -34,7 +34,7 @@ private:
         ITEM_START = 0,
         ITEM_PATTERN,
         ITEM_TIME,
-        ITEM_HAPTICS,
+        ITEM_ALERT_MODE,
         ITEM_SUMMARY
     };
 
@@ -44,6 +44,7 @@ private:
     char mStartTip[32]{};
     char mPatternTip[32]{};
     char mTimeTip[24]{};
+    char mAlertModeTip[24]{};
     char mSummaryTip[32]{};
 
     std::unique_ptr<Widgets::WheelMenu> mMenu;

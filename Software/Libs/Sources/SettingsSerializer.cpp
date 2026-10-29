@@ -45,7 +45,7 @@ bool SettingsSerializer::save(const Settings& settings)
     writer.startMap();
     writer.add("pattern_index", settings.selectedPatternIndex);
     writer.add("target_duration", settings.targetDurationSec);
-    writer.add("haptics_enabled", settings.hapticsEnabled);
+    writer.add("vibrate_only", settings.vibrateOnly);
     writer.endMap();
 
     file->flush();
@@ -96,9 +96,9 @@ bool SettingsSerializer::load(Settings& settings)
         settings.targetDurationSec = dur;
     }
 
-    bool haptics = true;
-    if (reader.get("haptics_enabled", haptics)) {
-        settings.hapticsEnabled = haptics;
+    bool vibOnly = false;
+    if (reader.get("vibrate_only", vibOnly)) {
+        settings.vibrateOnly = vibOnly;
     }
 
     delete[] buffer;

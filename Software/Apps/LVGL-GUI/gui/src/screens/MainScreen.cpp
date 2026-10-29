@@ -66,6 +66,8 @@ void MainScreen::populateItems()
 
     std::snprintf(mStartTip, sizeof(mStartTip), "%s  %s", p.displayName, mTimeTip);
     std::snprintf(mPatternTip, sizeof(mPatternTip), "%s (%s)", p.displayName, p.ratioLabel);
+    std::snprintf(mAlertModeTip, sizeof(mAlertModeTip), "%s",
+                  s.vibrateOnly ? "Vibration Only" : "Sound & Vibrate");
 
     const bool hasSummary = (sum.duration > 0);
     if (hasSummary) {
@@ -101,12 +103,13 @@ void MainScreen::populateItems()
     mItems[ITEM_TIME].tip        = mTimeTip;
     mItems[ITEM_TIME].tipColor   = Color::TEAL;
 
-    // 3: Haptics
-    mItems[ITEM_HAPTICS]             = {};
-    mItems[ITEM_HAPTICS].style       = Style::Toggle;
-    mItems[ITEM_HAPTICS].text        = "Haptics";
-    mItems[ITEM_HAPTICS].centerFont  = &poppins_semibold_25;
-    mItems[ITEM_HAPTICS].toggleState = s.hapticsEnabled;
+    // 3: Alert Mode (Sound & Vibrate / Vibration Only)
+    mItems[ITEM_ALERT_MODE]            = {};
+    mItems[ITEM_ALERT_MODE].style      = Style::Tip;
+    mItems[ITEM_ALERT_MODE].text       = "Alert Mode";
+    mItems[ITEM_ALERT_MODE].centerFont = &poppins_semibold_25;
+    mItems[ITEM_ALERT_MODE].tip        = mAlertModeTip;
+    mItems[ITEM_ALERT_MODE].tipColor   = Color::TEAL;
 
     // 4: Summary
     mItems[ITEM_SUMMARY]            = {};
@@ -145,9 +148,9 @@ void MainScreen::onKey(uint8_t code)
                     ScreenManager::instance().goTo(ScreenId::DurationSelect);
                     break;
 
-                case ITEM_HAPTICS: {
+                case ITEM_ALERT_MODE: {
                     Settings s = mModel.getSettings();
-                    s.hapticsEnabled = !s.hapticsEnabled;
+                    s.vibrateOnly = !s.vibrateOnly;
                     mModel.saveSettings(s);
                     populateItems();
                     mMenu->refresh();
