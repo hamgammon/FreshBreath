@@ -343,11 +343,6 @@ def main():
         ("06_breath_exhale_black",  "breath_exhale",  "black", "Active Breathing Exhale (Black Watch)"),
         ("07_hold_confirm_teal",    "hold_confirm",   "teal",  "3s Hold Confirm Save & End (Teal Watch)"),
         ("08_summary_white",        "summary",        "white", "Workout Summary Screen (White Watch)"),
-        # Keep legacy filename alias for backwards compatibility
-        ("03_breath_inhale_white",  "breath_inhale",  "white", "Legacy Alias Inhale"),
-        ("04_breath_hold_teal",     "breath_hold",    "teal",  "Legacy Alias Hold"),
-        ("05_breath_exhale_black",  "breath_exhale",  "black", "Legacy Alias Exhale"),
-        ("06_summary_white",        "summary",        "white", "Legacy Alias Summary"),
     ]
 
     for filename, screen_type, watch_case, title in configs:

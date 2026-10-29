@@ -1,0 +1,26 @@
+{
+  "manifest_version": 1,
+  "type": [
+    "activity"
+  ],
+  "name": "FreshBreath",
+  "icon": "icon.png",
+  "binary": "FreshBreath_1.0.1.uapp",
+  "previews": "previews/",
+  "appVersion": "1.0.1",
+  "minKernelVersion": "1.4.0",
+  "requiredHardware": [
+    "HR"
+  ],
+  "description": "Mindful breathing and meditation activity with 6 science-backed breathwork patterns, visual arc pacer, eyes-closed haptic & audio guidance, and live heart rate tracking.",
+  "id": "432197B5C95258BF",
+  "supportsLaps": false,
+  "supportsDistance": false,
+  "supportsTrack": false,
+  "supportsHeartbeat": true,
+  "supportsElevation": false,
+  "supportsStep": false,
+  "supportsSpeed": "none",
+  "customMeasures": [],
+  "stravaExport": false
+}

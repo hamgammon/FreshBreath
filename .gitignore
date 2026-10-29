@@ -1,6 +1,22 @@
+# Build artifacts
+build/
+**/build/
+Software/Apps/*/build/
+Output/*
+!Output/.gitignore
+!Output/app-manifest.json
+dist/*
+!dist/.gitignore
+*.zip
+*.elf
+*.bin
+*.map
+*.o
+*.obj
+
+# Python & OS files
 __pycache__/
 *.pyc
 .DS_Store
-Software/Apps/FreshBreath-CMake/build/
 .vscode/
 .idea/
