@@ -76,10 +76,8 @@ void MainScreen::onShow()
 void MainScreen::onKey(uint8_t code)
 {
     switch (code) {
-        case SDK::GUI::Button::R1: { // Start breathing session
-            const Settings& s = mModel.getSettings();
-            mModel.startTrack(s.selectedPatternIndex, s.targetDurationSec);
-            ScreenManager::instance().goTo(ScreenId::Breath);
+        case SDK::GUI::Button::R1: { // Start breathing session (with 10-second preparation)
+            ScreenManager::instance().goTo(ScreenId::Countdown);
         } break;
 
         case SDK::GUI::Button::L2: // Change pattern

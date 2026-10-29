@@ -25,7 +25,7 @@ protected:
 private:
     void updateView();
 
-    static constexpr size_t kOptionCount = 7;
+    static constexpr size_t kOptionCount = 8;
     static const uint16_t kDurations[kOptionCount];
 
     std::unique_ptr<SDK::LVGL::Buttons> mButtons;

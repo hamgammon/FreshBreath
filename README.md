@@ -74,14 +74,14 @@ FreshBreath includes 6 scientifically validated breathwork protocols:
 
 ## 🎮 Watch Button Controls
 
-The watch uses the 4 hardware bezel buttons:
+The watch uses the 4 hardware bezel buttons, aligned with standard UNA Watch activities (such as `Run` and `Workout`):
 
-| Button | Key | Main Screen | Pattern / Duration Select | Active Breathing Session | Summary Screen |
-| :---: | :---: | :--- | :--- | :--- | :--- |
-| **L1** *(Top Left)* | `'1'` | Review Last Summary / Exit | Previous Option | Discard Session | Finish & Return |
-| **L2** *(Bottom Left)* | `'2'` | Open Pattern Selector | Next Option | — | — |
-| **R1** *(Top Right)* | `'3'` | **Start Breathing** | **Confirm Selection** | **Pause / Resume** | **Finish & Return** |
-| **R2** *(Bottom Right)* | `'4'` | Open Duration Selector | Cancel / Back | **Finish & Save Workout** | — |
+| Button | Key | Main Screen | Pattern / Duration Select | 10s Preparation | Active Breathing Session | Pause Action Menu | Summary Screen |
+| :---: | :---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| **L1** *(Top Left)* | `'1'` | Review Summary / Exit | **▲ Up / Previous** | Cancel & Back | — *(Protects Eyes-Closed Focus)* | **▲ Up** | Finish & Return |
+| **L2** *(Bottom Left)* | `'2'` | Open Pattern Selector | **▼ Down / Next** | — | — | **▼ Down** | — |
+| **R1** *(Top Right)* | `'3'` | **Start (10s Prep)** | **Confirm Selection** | **Skip to Start** | **Pause Activity** | **Select (Resume / Save / Discard)** | **Finish & Return** |
+| **R2** *(Bottom Right)* | `'4'` | Open Duration Selector | Cancel / Back | — | — | Quick Resume | — |
 
 ---
 

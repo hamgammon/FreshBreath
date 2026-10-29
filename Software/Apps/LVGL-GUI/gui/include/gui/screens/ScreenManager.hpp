@@ -17,7 +17,9 @@ enum class ScreenId : uint8_t {
     Main = 0,
     PatternSelect,
     DurationSelect,
+    Countdown,
     Breath,
+    Pause,
     Summary
 };
 

@@ -17,7 +17,9 @@
 #include "gui/screens/MainScreen.hpp"
 #include "gui/screens/PatternSelectScreen.hpp"
 #include "gui/screens/DurationSelectScreen.hpp"
+#include "gui/screens/CountdownScreen.hpp"
 #include "gui/screens/BreathScreen.hpp"
+#include "gui/screens/PauseScreen.hpp"
 #include "gui/screens/SummaryScreen.hpp"
 
 ScreenManager& ScreenManager::instance()
@@ -59,7 +61,9 @@ Screen* ScreenManager::create(ScreenId id)
         case ScreenId::Main:           return new MainScreen(*mModel);
         case ScreenId::PatternSelect:  return new PatternSelectScreen(*mModel);
         case ScreenId::DurationSelect: return new DurationSelectScreen(*mModel);
+        case ScreenId::Countdown:      return new CountdownScreen(*mModel);
         case ScreenId::Breath:         return new BreathScreen(*mModel);
+        case ScreenId::Pause:          return new PauseScreen(*mModel);
         case ScreenId::Summary:        return new SummaryScreen(*mModel);
         default:                       return nullptr;
     }

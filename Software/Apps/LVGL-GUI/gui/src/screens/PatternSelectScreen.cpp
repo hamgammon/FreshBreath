@@ -59,7 +59,7 @@ void PatternSelectScreen::build()
     mBenefitLabel = Theme::label(card, Theme::Font::Italic18, "", 0, 108, 210,
                                  LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::YELLOW_DARK);
 
-    mNavLabel = Theme::label(mRoot, Theme::Font::Regular14, "L1/L2: Change • R1: Select", 0, 198, 240,
+    mNavLabel = Theme::label(mRoot, Theme::Font::Regular14, "L1: Up • L2: Down • R1: OK", 0, 198, 240,
                              LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
 
     updateView();
@@ -104,6 +104,14 @@ void PatternSelectScreen::onKey(uint8_t code)
 void PatternSelectScreen::updateView()
 {
     const FreshBreath::BreathPattern& p = FreshBreath::PatternRegistry::getPattern(mCurrentIndex);
+
+    if (mTitleLabel) {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "SELECT PATTERN (%u/%u)",
+                      static_cast<unsigned>(mCurrentIndex + 1),
+                      static_cast<unsigned>(FreshBreath::PatternRegistry::kPatternCount));
+        lv_label_set_text(mTitleLabel, buf);
+    }
 
     if (mPatternLabel) {
         lv_label_set_text(mPatternLabel, p.displayName);

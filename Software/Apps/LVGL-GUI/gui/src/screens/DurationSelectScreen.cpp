@@ -12,6 +12,7 @@
 #include <cstdio>
 
 const uint16_t DurationSelectScreen::kDurations[DurationSelectScreen::kOptionCount] = {
+    60,   // 1 min
     180,  // 3 min
     240,  // 4 min
     300,  // 5 min
@@ -55,7 +56,7 @@ void DurationSelectScreen::build()
     mSubLabel = Theme::label(card, Theme::Font::Regular16, "", 0, 75, 200,
                              LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::WHITE);
 
-    mNavLabel = Theme::label(mRoot, Theme::Font::Regular14, "L1/L2: Change • R1: Select", 0, 195, 240,
+    mNavLabel = Theme::label(mRoot, Theme::Font::Regular14, "L1: Up • L2: Down • R1: OK", 0, 195, 240,
                              LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
 
     updateView();
@@ -104,6 +105,14 @@ void DurationSelectScreen::onKey(uint8_t code)
 
 void DurationSelectScreen::updateView()
 {
+    if (mTitleLabel) {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "SELECT DURATION (%u/%u)",
+                      static_cast<unsigned>(mCurrentIndex + 1),
+                      static_cast<unsigned>(kOptionCount));
+        lv_label_set_text(mTitleLabel, buf);
+    }
+
     uint16_t dur = kDurations[mCurrentIndex];
     if (dur == 0) {
         if (mDurationLabel) lv_label_set_text(mDurationLabel, "Open");

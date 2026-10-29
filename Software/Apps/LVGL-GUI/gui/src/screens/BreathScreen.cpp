@@ -22,10 +22,10 @@ BreathScreen::BreathScreen(Model& model)
 void BreathScreen::build()
 {
     mButtons = std::make_unique<SDK::LVGL::Buttons>(mRoot);
-    mButtons->set(SDK::LVGL::Buttons::RED,     // L1: Discard
+    mButtons->set(SDK::LVGL::Buttons::NONE,    // L1: None
                   SDK::LVGL::Buttons::NONE,    // L2: None
-                  SDK::LVGL::Buttons::AMBER,   // R1: Pause / Resume
-                  SDK::LVGL::Buttons::GREEN);  // R2: Finish & Save
+                  SDK::LVGL::Buttons::AMBER,   // R1: Start/Stop -> Pause
+                  SDK::LVGL::Buttons::NONE);   // R2: None
 
     // Background track ring (subtle dark teal)
     mBreathArcBg = Theme::arc(mRoot, 120, 120, 95, 8, 0, 360, SDK::GUI::Color::TEAL_DARK, false);
@@ -72,27 +72,9 @@ void BreathScreen::onHide()
 void BreathScreen::onKey(uint8_t code)
 {
     switch (code) {
-        case SDK::GUI::Button::R1: // Pause / Resume toggle
-            if (mIsPaused) {
-                mModel.resumeTrack();
-                mIsPaused = false;
-                Theme::setHidden(mStatusLabel, true);
-                mButtons->setR1(SDK::LVGL::Buttons::AMBER);
-            } else {
-                mModel.pauseTrack();
-                mIsPaused = true;
-                Theme::setHidden(mStatusLabel, false);
-                mButtons->setR1(SDK::LVGL::Buttons::GREEN);
-            }
-            break;
-
-        case SDK::GUI::Button::R2: // Finish & Save workout
-            mModel.stopTrack(false);
-            break;
-
-        case SDK::GUI::Button::L1: // Discard workout
-            mModel.stopTrack(true);
-            ScreenManager::instance().goTo(ScreenId::Main);
+        case SDK::GUI::Button::R1: // Start/Stop button -> Pause & show action options
+            mModel.pauseTrack();
+            ScreenManager::instance().goTo(ScreenId::Pause);
             break;
 
         default:
@@ -110,6 +92,8 @@ void BreathScreen::onTrackStateChanged(Track::State state)
 {
     if (state == Track::State::COMPLETED) {
         ScreenManager::instance().goTo(ScreenId::Summary);
+    } else if (state == Track::State::PAUSED) {
+        ScreenManager::instance().goTo(ScreenId::Pause);
     } else if (state == Track::State::INACTIVE) {
         ScreenManager::instance().goTo(ScreenId::Main);
     }
