@@ -71,7 +71,7 @@ void ResultScreen::onShow()
             break;
     }
 
-    mRing->setProgress(0.0f);
+    mRing->setProgress(0);
 
     lv_anim_t a;
     lv_anim_init(&a);
@@ -104,8 +104,9 @@ void ResultScreen::onKey(uint8_t code)
 void ResultScreen::animExecCb(void* var, int32_t value)
 {
     auto* self = static_cast<ResultScreen*>(var);
+    if (value < 0) value = 0;
     if (self->mTimeoutMs > 0) {
-        self->mRing->setProgress(static_cast<float>(value) / static_cast<float>(self->mTimeoutMs));
+        self->mRing->setProgress(static_cast<uint32_t>(value) * 1000u / self->mTimeoutMs);
     }
 }
 

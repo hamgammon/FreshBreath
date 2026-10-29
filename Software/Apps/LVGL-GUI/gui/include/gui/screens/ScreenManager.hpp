@@ -20,6 +20,7 @@ enum class ScreenId : uint8_t {
     Countdown,
     Breath,
     Pause,
+    HoldConfirm,
     Result,
     Summary
 };

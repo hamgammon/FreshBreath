@@ -327,9 +327,26 @@ void Service::processTrackTick()
     mTrackData.totalTime++;
     mTrackData.phaseElapsedSec++;
 
-    // Check if target duration reached
+    // Check if target duration reached -> pause and prompt user to Save & End / Discard / Resume
     if (mTrackData.targetTime > 0 && mTrackData.totalTime >= mTrackData.targetTime) {
-        stopTrack(false);
+        mTrackData.targetTime = 0; // Allow open continuation if user chooses Resume
+        mTrackState = Track::State::PAUSED;
+        mActivityWriter.pause(std::time(nullptr));
+
+        playVibroPattern(SDK::Message::RequestVibroPlay::Effect::ALERT_750MS_100, 3, 200);
+        if (!mSettings.vibrateOnly) {
+            static const SDK::Message::RequestBuzzerPlay::Note kCompleteChime[] = {
+                { 300, 100, 0, 1318 },
+                { 120,   0, 0, 1318 },
+                { 300, 100, 0, 1568 },
+                { 120,   0, 0, 1568 },
+                { 400, 100, 0, 2093 }
+            };
+            playBuzzerNotes(kCompleteChime, 5);
+        }
+
+        SDK::send_msg<CustomMessage::TrackDataUpd>(mKernel, mTrackData);
+        SDK::send_msg<CustomMessage::TrackStateUpd>(mKernel, mTrackState);
         return;
     }
 

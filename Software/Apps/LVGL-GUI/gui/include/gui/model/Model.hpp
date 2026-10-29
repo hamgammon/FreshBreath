@@ -35,6 +35,11 @@ public:
         WorkoutDiscarded
     };
 
+    enum class HoldConfirmMode : uint8_t {
+        Finish = 0,
+        Discard
+    };
+
     Model();
     ~Model() override;
 
@@ -67,6 +72,9 @@ public:
     ResultMode getResultMode() const { return mResultMode; }
     void setResultMode(ResultMode mode) { mResultMode = mode; }
 
+    HoldConfirmMode getHoldConfirmMode() const { return mHoldConfirmMode; }
+    void setHoldConfirmMode(HoldConfirmMode mode) { mHoldConfirmMode = mode; }
+
     // Key event from screen
     void handleKeyEvent(uint8_t key);
 
@@ -88,6 +96,7 @@ private:
     uint16_t        mMainCursor = 0;
     uint16_t        mPauseCursor = 0;
     ResultMode      mResultMode = ResultMode::SettingSaved;
+    HoldConfirmMode mHoldConfirmMode = HoldConfirmMode::Finish;
 };
 
 #endif // MODEL_HPP

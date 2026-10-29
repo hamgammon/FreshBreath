@@ -19,6 +19,7 @@ public:
     ~PauseScreen() override = default;
 
     void onShow() override;
+    void onHide() override;
     void onKey(uint8_t code) override;
     void onTrackDataUpdated(const Track::Data& data) override;
 

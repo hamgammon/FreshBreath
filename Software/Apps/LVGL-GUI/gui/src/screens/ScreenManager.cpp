@@ -20,6 +20,7 @@
 #include "gui/screens/CountdownScreen.hpp"
 #include "gui/screens/BreathScreen.hpp"
 #include "gui/screens/PauseScreen.hpp"
+#include "gui/screens/HoldConfirmScreen.hpp"
 #include "gui/screens/ResultScreen.hpp"
 #include "gui/screens/SummaryScreen.hpp"
 
@@ -65,6 +66,7 @@ Screen* ScreenManager::create(ScreenId id)
         case ScreenId::Countdown:      return new CountdownScreen(*mModel);
         case ScreenId::Breath:         return new BreathScreen(*mModel);
         case ScreenId::Pause:          return new PauseScreen(*mModel);
+        case ScreenId::HoldConfirm:    return new HoldConfirmScreen(*mModel);
         case ScreenId::Result:         return new ResultScreen(*mModel);
         case ScreenId::Summary:        return new SummaryScreen(*mModel);
         default:                       return nullptr;

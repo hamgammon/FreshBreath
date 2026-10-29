@@ -68,7 +68,7 @@ void CountdownScreen::onShow()
     lv_label_set_text(mRatio, timeBuf);
     lv_label_set_text(mTarget, "Get Ready");
 
-    mRing->setProgress(1.0f);
+    mRing->setRemaining(1000);
 
     lv_anim_t a;
     lv_anim_init(&a);
@@ -105,8 +105,9 @@ void CountdownScreen::onKey(uint8_t code)
 void CountdownScreen::animExecCb(void* var, int32_t value)
 {
     auto* self = static_cast<CountdownScreen*>(var);
+    if (value < 0) value = 0;
     const float rem = 1.0f - static_cast<float>(value) / static_cast<float>(kTimeoutMs);
-    self->mRing->setProgress(rem);
+    self->mRing->setRemaining(1000u - (static_cast<uint32_t>(value) * 1000u / kTimeoutMs));
 
     int32_t shown = static_cast<int32_t>(rem * kCountTicks) + 1;
     if (shown > kCountTicks) shown = kCountTicks;

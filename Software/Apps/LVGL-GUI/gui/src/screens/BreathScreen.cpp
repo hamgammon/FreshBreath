@@ -97,6 +97,8 @@ void BreathScreen::onTrackStateChanged(Track::State state)
         mModel.setResultMode(Model::ResultMode::WorkoutSaved);
         ScreenManager::instance().goTo(ScreenId::Result);
     } else if (state == Track::State::PAUSED) {
+        // Target duration reached -> open Pause menu with "Save & End" selected
+        mModel.setPauseCursor(1);
         ScreenManager::instance().goTo(ScreenId::Pause);
     } else if (state == Track::State::INACTIVE) {
         ScreenManager::instance().goTo(ScreenId::Main);

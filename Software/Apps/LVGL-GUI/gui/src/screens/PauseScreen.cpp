@@ -42,6 +42,13 @@ void PauseScreen::onShow()
     mInfo->setCount(SLOT_COUNT);
 }
 
+void PauseScreen::onHide()
+{
+    if (mMenu) {
+        mModel.setPauseCursor(mMenu->selected());
+    }
+}
+
 void PauseScreen::onKey(uint8_t code)
 {
     switch (code) {
@@ -53,32 +60,34 @@ void PauseScreen::onKey(uint8_t code)
             mMenu->next();
             break;
 
-        case Btn::R1: {
+        // Save & End and Discard start a hold-to-confirm the moment R1 is pressed down
+        case Btn::R1_PRESS: {
             const uint16_t sel = mMenu->selected();
             mModel.setPauseCursor(sel);
 
             switch (sel) {
-                case ITEM_RESUME:
-                    mModel.resumeTrack();
-                    ScreenManager::instance().goTo(ScreenId::Breath);
-                    break;
-
                 case ITEM_SAVE_END:
-                    mModel.stopTrack(false);
-                    mModel.setMainCursor(0);
-                    mModel.setResultMode(Model::ResultMode::WorkoutSaved);
-                    ScreenManager::instance().goTo(ScreenId::Result);
+                    mModel.setHoldConfirmMode(Model::HoldConfirmMode::Finish);
+                    ScreenManager::instance().goTo(ScreenId::HoldConfirm);
                     break;
 
                 case ITEM_DISCARD:
-                    mModel.stopTrack(true);
-                    mModel.setMainCursor(0);
-                    mModel.setResultMode(Model::ResultMode::WorkoutDiscarded);
-                    ScreenManager::instance().goTo(ScreenId::Result);
+                    mModel.setHoldConfirmMode(Model::HoldConfirmMode::Discard);
+                    ScreenManager::instance().goTo(ScreenId::HoldConfirm);
                     break;
 
                 default:
                     break;
+            }
+        } break;
+
+        case Btn::R1: {
+            const uint16_t sel = mMenu->selected();
+            mModel.setPauseCursor(sel);
+
+            if (sel == ITEM_RESUME) {
+                mModel.resumeTrack();
+                ScreenManager::instance().goTo(ScreenId::Breath);
             }
         } break;
 
