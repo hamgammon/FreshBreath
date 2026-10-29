@@ -6,7 +6,6 @@
   "name": "FreshBreath",
   "icon": "icon.png",
   "binary": "FreshBreath_1.0.1.uapp",
-  "previews": "previews/",
   "appVersion": "1.0.1",
   "minKernelVersion": "1.4.0",
   "requiredHardware": [
