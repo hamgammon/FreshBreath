@@ -208,7 +208,7 @@ void Service::startTrack(uint8_t patternIndex, uint16_t targetDurationSec)
 
     ActivityWriter::AppInfo info{};
     info.timestamp = mStartUtc;
-    info.appID = "4652455348425254";
+    info.appID = "432197B5C95258BF";
     info.devID = "UNA";
     mActivityWriter.start(info);
 
