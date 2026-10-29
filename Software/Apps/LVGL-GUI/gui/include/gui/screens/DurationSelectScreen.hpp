@@ -1,15 +1,16 @@
 /**
  ******************************************************************************
  * @file    DurationSelectScreen.hpp
- * @brief   Screen to choose session target duration.
+ * @brief   WheelMenu screen to select breathwork session duration.
  ******************************************************************************
  */
 
 #ifndef DURATION_SELECT_SCREEN_HPP
 #define DURATION_SELECT_SCREEN_HPP
 
-#include "gui/screens/Screen.hpp"
 #include <memory>
+#include "gui/screens/Screen.hpp"
+#include "gui/widgets/Widgets.hpp"
 
 class DurationSelectScreen : public Screen {
 public:
@@ -23,19 +24,15 @@ protected:
     void build() override;
 
 private:
-    void updateView();
+    static constexpr uint16_t kOptionCount = 8;
 
-    static constexpr size_t kOptionCount = 8;
-    static const uint16_t kDurations[kOptionCount];
+    void populateItems();
 
-    std::unique_ptr<SDK::LVGL::Buttons> mButtons;
+    Widgets::WheelMenu::Item mItems[kOptionCount]{};
 
-    size_t mCurrentIndex = 2; // Default: 5 min
-
-    lv_obj_t* mTitleLabel     = nullptr;
-    lv_obj_t* mDurationLabel  = nullptr;
-    lv_obj_t* mSubLabel       = nullptr;
-    lv_obj_t* mNavLabel       = nullptr;
+    std::unique_ptr<Widgets::WheelMenu> mMenu;
+    std::unique_ptr<Widgets::Title>     mTitle;
+    std::unique_ptr<Widgets::Buttons>   mButtons;
 };
 
 #endif // DURATION_SELECT_SCREEN_HPP

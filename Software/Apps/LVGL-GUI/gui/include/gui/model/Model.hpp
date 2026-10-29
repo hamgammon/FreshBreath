@@ -15,6 +15,7 @@
 #include "SDK/Port/LVGL/LvglPort.hpp"
 #include "SDK/Interfaces/IGuiLifeCycleCallback.hpp"
 #include "SDK/Interfaces/ICustomMessageHandler.hpp"
+#include "SDK/GUI/Button.hpp"
 
 #include "Commands.hpp"
 #include "Settings.hpp"
@@ -22,10 +23,18 @@
 #include "ActivitySummary.hpp"
 #include "ModelListener.hpp"
 
+namespace Btn = SDK::GUI::Button;
+
 class Model : public SDK::Interface::IGuiLifeCycleCallback,
               public SDK::Interface::ICustomMessageHandler
 {
 public:
+    enum class ResultMode : uint8_t {
+        SettingSaved = 0,
+        WorkoutSaved,
+        WorkoutDiscarded
+    };
+
     Model();
     ~Model() override;
 
@@ -48,6 +57,16 @@ public:
     uint8_t getBatteryLevel() const { return mBatteryLevel; }
     bool is12Hour() const { return mTimeFormat12h; }
 
+    // UI cursor and navigation state
+    uint16_t getMainCursor() const { return mMainCursor; }
+    void setMainCursor(uint16_t cursor) { mMainCursor = cursor; }
+
+    uint16_t getPauseCursor() const { return mPauseCursor; }
+    void setPauseCursor(uint16_t cursor) { mPauseCursor = cursor; }
+
+    ResultMode getResultMode() const { return mResultMode; }
+    void setResultMode(ResultMode mode) { mResultMode = mode; }
+
     // Key event from screen
     void handleKeyEvent(uint8_t key);
 
@@ -65,6 +84,10 @@ private:
     std::tm         mTime{};
     uint8_t         mBatteryLevel = 100;
     bool            mTimeFormat12h = false;
+
+    uint16_t        mMainCursor = 0;
+    uint16_t        mPauseCursor = 0;
+    ResultMode      mResultMode = ResultMode::SettingSaved;
 };
 
 #endif // MODEL_HPP

@@ -1,136 +1,100 @@
 /**
  ******************************************************************************
  * @file    PatternSelectScreen.cpp
- * @brief   Screen to browse and select breathwork patterns implementation.
+ * @brief   WheelMenu screen implementation for selecting breathwork pattern.
  ******************************************************************************
  */
 
 #include "gui/screens/PatternSelectScreen.hpp"
 #include "gui/screens/ScreenManager.hpp"
 #include "gui/theme/Theme.hpp"
-#include "BreathPatterns.hpp"
+#include "gui/Assets.hpp"
 
 #include <cstdio>
 
-static const char* getBenefitDescription(size_t index)
-{
-    switch (index) {
-        case 0: return "Focus & Acute Stress Reset";
-        case 1: return "Deep Vagal Calm & Sleep";
-        case 2: return "Max HRV & Heart Coherence";
-        case 3: return "Anxiety Relief (1:2 Ratio)";
-        case 4: return "Morning Alertness & Energy";
-        case 5: return "Harmonious Mindfulness";
-        default: return "";
-    }
-}
+using namespace SDK::GUI;
+
+namespace {
+const char* const kPatternBenefits[FreshBreath::PatternRegistry::kPatternCount] = {
+    "Focus",
+    "Sleep",
+    "HRV",
+    "Calm",
+    "Alert",
+    "Steady"
+};
+} // namespace
 
 PatternSelectScreen::PatternSelectScreen(Model& model)
     : Screen(model)
-    , mCurrentIndex(model.getSettings().selectedPatternIndex)
 {
 }
 
 void PatternSelectScreen::build()
 {
-    mButtons = std::make_unique<SDK::LVGL::Buttons>(mRoot);
-    mButtons->set(SDK::LVGL::Buttons::WHITE,   // L1: Prev
-                  SDK::LVGL::Buttons::WHITE,   // L2: Next
-                  SDK::LVGL::Buttons::GREEN,   // R1: Select
-                  SDK::LVGL::Buttons::RED);    // R2: Cancel
+    populateItems();
 
-    mTitleLabel = Theme::label(mRoot, Theme::Font::Regular14, "SELECT PATTERN", 0, 15, 240,
-                               LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
-
-    lv_obj_t* card = Theme::container(mRoot, 15, 38, 210, 150);
-    lv_obj_set_style_bg_color(card, Theme::rgb(SDK::GUI::Color::TEAL_DARK), 0);
-    lv_obj_set_style_bg_opa(card, LV_OPA_40, 0);
-    lv_obj_set_style_radius(card, 10, 0);
-
-    mPatternLabel = Theme::label(card, Theme::Font::SemiBold25, "", 0, 10, 210,
-                                 LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::CYAN_PURE);
-
-    mRatioLabel = Theme::label(card, Theme::Font::SemiBold20, "", 0, 42, 210,
-                               LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::WHITE);
-
-    mPhasesLabel = Theme::label(card, Theme::Font::Regular14, "", 0, 72, 210,
-                                LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::AQUA);
-
-    mBenefitLabel = Theme::label(card, Theme::Font::Italic18, "", 0, 108, 210,
-                                 LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::YELLOW_DARK);
-
-    mNavLabel = Theme::label(mRoot, Theme::Font::Regular14, "L1: Up • L2: Down • R1: OK", 0, 198, 240,
-                             LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
-
-    updateView();
+    mMenu    = std::make_unique<Widgets::WheelMenu>(mRoot, mItems, kCount);
+    mTitle   = std::make_unique<Widgets::Title>(mRoot, "PATTERN");
+    mButtons = std::make_unique<Widgets::Buttons>(mRoot);
+    mButtons->set(Widgets::Buttons::NONE,
+                  Widgets::Buttons::NONE,
+                  Widgets::Buttons::AMBER,
+                  Widgets::Buttons::WHITE);
 }
 
 void PatternSelectScreen::onShow()
 {
-    mCurrentIndex = mModel.getSettings().selectedPatternIndex;
-    updateView();
+    populateItems();
+    mMenu->refresh();
+
+    uint16_t sel = mModel.getSettings().selectedPatternIndex;
+    if (sel >= kCount) sel = 0;
+    mMenu->select(sel);
+}
+
+void PatternSelectScreen::populateItems()
+{
+    using Style = Widgets::WheelMenu::Style;
+    const uint8_t currentIdx = mModel.getSettings().selectedPatternIndex;
+
+    for (uint16_t i = 0; i < kCount; ++i) {
+        const auto& p = FreshBreath::PatternRegistry::getPattern(i);
+        std::snprintf(mTips[i], sizeof(mTips[i]), "%s  %s", p.ratioLabel, kPatternBenefits[i]);
+
+        mItems[i]            = {};
+        mItems[i].style      = Style::Tip;
+        mItems[i].text       = p.displayName;
+        mItems[i].centerFont = &poppins_semibold_25;
+        mItems[i].tip        = mTips[i];
+        mItems[i].tipColor   = (i == currentIdx) ? Color::TEAL : Color::WHITE;
+    }
 }
 
 void PatternSelectScreen::onKey(uint8_t code)
 {
     switch (code) {
-        case SDK::GUI::Button::L2: // Next pattern
-            mCurrentIndex = (mCurrentIndex + 1) % FreshBreath::PatternRegistry::kPatternCount;
-            updateView();
+        case Btn::L1:
+            mMenu->prev();
             break;
 
-        case SDK::GUI::Button::L1: // Previous pattern
-            mCurrentIndex = (mCurrentIndex + FreshBreath::PatternRegistry::kPatternCount - 1)
-                            % FreshBreath::PatternRegistry::kPatternCount;
-            updateView();
+        case Btn::L2:
+            mMenu->next();
             break;
 
-        case SDK::GUI::Button::R1: { // Confirm selection
+        case Btn::R1: {
             Settings s = mModel.getSettings();
-            s.selectedPatternIndex = mCurrentIndex;
+            s.selectedPatternIndex = static_cast<uint8_t>(mMenu->selected());
             mModel.saveSettings(s);
-            ScreenManager::instance().goTo(ScreenId::Main);
+            mModel.setResultMode(Model::ResultMode::SettingSaved);
+            ScreenManager::instance().goTo(ScreenId::Result);
         } break;
 
-        case SDK::GUI::Button::R2: // Cancel
+        case Btn::R2:
             ScreenManager::instance().goTo(ScreenId::Main);
             break;
 
         default:
             break;
-    }
-}
-
-void PatternSelectScreen::updateView()
-{
-    const FreshBreath::BreathPattern& p = FreshBreath::PatternRegistry::getPattern(mCurrentIndex);
-
-    if (mTitleLabel) {
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "SELECT PATTERN (%u/%u)",
-                      static_cast<unsigned>(mCurrentIndex + 1),
-                      static_cast<unsigned>(FreshBreath::PatternRegistry::kPatternCount));
-        lv_label_set_text(mTitleLabel, buf);
-    }
-
-    if (mPatternLabel) {
-        lv_label_set_text(mPatternLabel, p.displayName);
-    }
-
-    if (mRatioLabel) {
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "Ratio: %s", p.ratioLabel);
-        lv_label_set_text(mRatioLabel, buf);
-    }
-
-    if (mPhasesLabel) {
-        char buf[64];
-        std::snprintf(buf, sizeof(buf), "In %us • Hold %us • Out %us • Hold %us",
-                      p.inhaleSec, p.holdInSec, p.exhaleSec, p.holdOutSec);
-        lv_label_set_text(mPhasesLabel, buf);
-    }
-
-    if (mBenefitLabel) {
-        lv_label_set_text(mBenefitLabel, getBenefitDescription(mCurrentIndex));
     }
 }

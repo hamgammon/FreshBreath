@@ -1,137 +1,109 @@
 /**
  ******************************************************************************
  * @file    DurationSelectScreen.cpp
- * @brief   Screen to choose session target duration implementation.
+ * @brief   WheelMenu screen implementation for selecting session duration.
  ******************************************************************************
  */
 
 #include "gui/screens/DurationSelectScreen.hpp"
 #include "gui/screens/ScreenManager.hpp"
 #include "gui/theme/Theme.hpp"
+#include "gui/Assets.hpp"
 
-#include <cstdio>
+using namespace SDK::GUI;
 
-const uint16_t DurationSelectScreen::kDurations[DurationSelectScreen::kOptionCount] = {
-    60,   // 1 min
-    180,  // 3 min
-    240,  // 4 min
-    300,  // 5 min
-    600,  // 10 min
-    900,  // 15 min
-    1200, // 20 min
-    0     // Open
+namespace {
+struct DurationOption {
+    uint16_t    sec;
+    const char* label;
+    const char* desc;
 };
+
+constexpr DurationOption kOptions[] = {
+    {   60, "1 min",  "Quick reset"       },
+    {  120, "2 min",  "Short calm"        },
+    {  180, "3 min",  "Mini break"        },
+    {  300, "5 min",  "Recommended"       },
+    {  600, "10 min", "Deep relaxation"   },
+    {  900, "15 min", "Extended session"  },
+    { 1200, "20 min", "Full meditation"   },
+    {    0, "Open",   "Until stopped"     }
+};
+} // namespace
 
 DurationSelectScreen::DurationSelectScreen(Model& model)
     : Screen(model)
 {
-    uint16_t currentDur = model.getSettings().targetDurationSec;
-    for (size_t i = 0; i < kOptionCount; ++i) {
-        if (kDurations[i] == currentDur) {
-            mCurrentIndex = i;
-            break;
-        }
-    }
 }
 
 void DurationSelectScreen::build()
 {
-    mButtons = std::make_unique<SDK::LVGL::Buttons>(mRoot);
-    mButtons->set(SDK::LVGL::Buttons::WHITE,   // L1: Prev
-                  SDK::LVGL::Buttons::WHITE,   // L2: Next
-                  SDK::LVGL::Buttons::GREEN,   // R1: Select
-                  SDK::LVGL::Buttons::RED);    // R2: Cancel
+    populateItems();
 
-    mTitleLabel = Theme::label(mRoot, Theme::Font::Regular14, "SELECT DURATION", 0, 20, 240,
-                               LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
-
-    lv_obj_t* card = Theme::container(mRoot, 20, 55, 200, 120);
-    lv_obj_set_style_bg_color(card, Theme::rgb(SDK::GUI::Color::GRAY_DARK), 0);
-    lv_obj_set_style_bg_opa(card, LV_OPA_40, 0);
-    lv_obj_set_style_radius(card, 10, 0);
-
-    mDurationLabel = Theme::label(card, Theme::Font::SemiBold40, "", 0, 20, 200,
-                                  LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::CYAN_PURE);
-
-    mSubLabel = Theme::label(card, Theme::Font::Regular16, "", 0, 75, 200,
-                             LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::WHITE);
-
-    mNavLabel = Theme::label(mRoot, Theme::Font::Regular14, "L1: Up • L2: Down • R1: OK", 0, 195, 240,
-                             LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
-
-    updateView();
+    mMenu    = std::make_unique<Widgets::WheelMenu>(mRoot, mItems, kOptionCount);
+    mTitle   = std::make_unique<Widgets::Title>(mRoot, "TIME");
+    mButtons = std::make_unique<Widgets::Buttons>(mRoot);
+    mButtons->set(Widgets::Buttons::NONE,
+                  Widgets::Buttons::NONE,
+                  Widgets::Buttons::AMBER,
+                  Widgets::Buttons::WHITE);
 }
 
 void DurationSelectScreen::onShow()
 {
-    uint16_t currentDur = mModel.getSettings().targetDurationSec;
-    for (size_t i = 0; i < kOptionCount; ++i) {
-        if (kDurations[i] == currentDur) {
-            mCurrentIndex = i;
+    populateItems();
+    mMenu->refresh();
+
+    const uint16_t curSec = mModel.getSettings().targetDurationSec;
+    uint16_t sel = 3; // Default 5 min
+    for (uint16_t i = 0; i < kOptionCount; ++i) {
+        if (kOptions[i].sec == curSec) {
+            sel = i;
             break;
         }
     }
-    updateView();
+    mMenu->select(sel);
+}
+
+void DurationSelectScreen::populateItems()
+{
+    using Style = Widgets::WheelMenu::Style;
+    const uint16_t curSec = mModel.getSettings().targetDurationSec;
+
+    for (uint16_t i = 0; i < kOptionCount; ++i) {
+        mItems[i]            = {};
+        mItems[i].style      = Style::Tip;
+        mItems[i].text       = kOptions[i].label;
+        mItems[i].centerFont = &poppins_semibold_25;
+        mItems[i].tip        = kOptions[i].desc;
+        mItems[i].tipColor   = (kOptions[i].sec == curSec) ? Color::TEAL : Color::WHITE;
+    }
 }
 
 void DurationSelectScreen::onKey(uint8_t code)
 {
     switch (code) {
-        case SDK::GUI::Button::L2: // Next duration
-            mCurrentIndex = (mCurrentIndex + 1) % kOptionCount;
-            updateView();
+        case Btn::L1:
+            mMenu->prev();
             break;
 
-        case SDK::GUI::Button::L1: // Previous duration
-            mCurrentIndex = (mCurrentIndex + kOptionCount - 1) % kOptionCount;
-            updateView();
+        case Btn::L2:
+            mMenu->next();
             break;
 
-        case SDK::GUI::Button::R1: { // Confirm
+        case Btn::R1: {
             Settings s = mModel.getSettings();
-            s.targetDurationSec = kDurations[mCurrentIndex];
+            s.targetDurationSec = kOptions[mMenu->selected()].sec;
             mModel.saveSettings(s);
-            ScreenManager::instance().goTo(ScreenId::Main);
+            mModel.setResultMode(Model::ResultMode::SettingSaved);
+            ScreenManager::instance().goTo(ScreenId::Result);
         } break;
 
-        case SDK::GUI::Button::R2: // Cancel
+        case Btn::R2:
             ScreenManager::instance().goTo(ScreenId::Main);
             break;
 
         default:
             break;
-    }
-}
-
-void DurationSelectScreen::updateView()
-{
-    if (mTitleLabel) {
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "SELECT DURATION (%u/%u)",
-                      static_cast<unsigned>(mCurrentIndex + 1),
-                      static_cast<unsigned>(kOptionCount));
-        lv_label_set_text(mTitleLabel, buf);
-    }
-
-    uint16_t dur = kDurations[mCurrentIndex];
-    if (dur == 0) {
-        if (mDurationLabel) lv_label_set_text(mDurationLabel, "Open");
-        if (mSubLabel) lv_label_set_text(mSubLabel, "Continuous practice");
-    } else {
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%u min", dur / 60);
-        if (mDurationLabel) lv_label_set_text(mDurationLabel, buf);
-
-        if (mSubLabel) {
-            if (dur == 180) {
-                lv_label_set_text(mSubLabel, "Quick reset");
-            } else if (dur == 300) {
-                lv_label_set_text(mSubLabel, "Recommended daily");
-            } else if (dur >= 600) {
-                lv_label_set_text(mSubLabel, "Deep HRV & Calm");
-            } else {
-                lv_label_set_text(mSubLabel, "Focused session");
-            }
-        }
     }
 }

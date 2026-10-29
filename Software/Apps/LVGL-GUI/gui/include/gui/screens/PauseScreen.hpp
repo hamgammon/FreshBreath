@@ -1,49 +1,55 @@
 /**
  ******************************************************************************
  * @file    PauseScreen.hpp
- * @brief   Track pause action screen offering Resume, Save, or Discard.
+ * @brief   Paused activity menu screen (Resume, Save & End, Discard)
+ *          modeled after RunLVGL's TrackActionScreen.
  ******************************************************************************
  */
 
 #ifndef PAUSE_SCREEN_HPP
 #define PAUSE_SCREEN_HPP
 
-#include "gui/screens/Screen.hpp"
-#include "SDK/GUI/LVGL/Buttons.hpp"
-
 #include <memory>
-#include <cstdint>
+#include "gui/screens/Screen.hpp"
+#include "gui/widgets/Widgets.hpp"
 
 class PauseScreen : public Screen {
 public:
-    enum class Action : uint8_t {
-        Resume = 0,
-        Save,
-        Discard,
-        Count
-    };
-
     explicit PauseScreen(Model& model);
     ~PauseScreen() override = default;
 
-    void build() override;
     void onShow() override;
     void onKey(uint8_t code) override;
-    void onTrackStateChanged(Track::State state) override;
+    void onTrackDataUpdated(const Track::Data& data) override;
+
+protected:
+    void build() override;
 
 private:
-    void updateHighlight();
-    void executeSelectedAction();
+    static constexpr uint16_t kItemCount = 3;
 
-    Action mSelected = Action::Resume;
+    enum ItemIdx : uint16_t {
+        ITEM_RESUME = 0,
+        ITEM_SAVE_END,
+        ITEM_DISCARD
+    };
 
-    lv_obj_t* mTitleLabel = nullptr;
-    lv_obj_t* mStatsLabel = nullptr;
-    lv_obj_t* mCards[3]{};
-    lv_obj_t* mLabels[3]{};
-    lv_obj_t* mNavLabel = nullptr;
+    enum Slot : int16_t {
+        SLOT_CYCLES = 0,
+        SLOT_AVG_HR,
+        SLOT_CALORIES,
+        SLOT_COUNT
+    };
 
-    std::unique_ptr<SDK::LVGL::Buttons> mButtons;
+    static void carouselCb(void* user, int16_t index);
+    void populateSlot(int16_t index);
+
+    Widgets::WheelMenu::Item mItems[kItemCount]{};
+
+    std::unique_ptr<Widgets::WheelMenu>      mMenu;
+    std::unique_ptr<Widgets::InfoCarousel>   mInfo;
+    std::unique_ptr<Widgets::PauseIndicator> mPause;
+    std::unique_ptr<Widgets::Buttons>        mButtons;
 };
 
 #endif // PAUSE_SCREEN_HPP

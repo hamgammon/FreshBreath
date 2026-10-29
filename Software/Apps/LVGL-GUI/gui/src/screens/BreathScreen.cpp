@@ -25,7 +25,7 @@ void BreathScreen::build()
     mButtons->set(SDK::LVGL::Buttons::NONE,    // L1: None
                   SDK::LVGL::Buttons::NONE,    // L2: None
                   SDK::LVGL::Buttons::AMBER,   // R1: Start/Stop -> Pause
-                  SDK::LVGL::Buttons::NONE);   // R2: None
+                  SDK::LVGL::Buttons::WHITE);  // R2: Back -> Pause
 
     // Background track ring (subtle dark teal)
     mBreathArcBg = Theme::arc(mRoot, 120, 120, 95, 8, 0, 360, SDK::GUI::Color::TEAL_DARK, false);
@@ -72,8 +72,10 @@ void BreathScreen::onHide()
 void BreathScreen::onKey(uint8_t code)
 {
     switch (code) {
-        case SDK::GUI::Button::R1: // Start/Stop button -> Pause & show action options
+        case Btn::R1: // Start/Stop button -> Pause & show action options
+        case Btn::R2: // Back button -> Pause & show action options
             mModel.pauseTrack();
+            mModel.setPauseCursor(0);
             ScreenManager::instance().goTo(ScreenId::Pause);
             break;
 
@@ -91,7 +93,9 @@ void BreathScreen::onTrackDataUpdated(const Track::Data& data)
 void BreathScreen::onTrackStateChanged(Track::State state)
 {
     if (state == Track::State::COMPLETED) {
-        ScreenManager::instance().goTo(ScreenId::Summary);
+        mModel.setMainCursor(0);
+        mModel.setResultMode(Model::ResultMode::WorkoutSaved);
+        ScreenManager::instance().goTo(ScreenId::Result);
     } else if (state == Track::State::PAUSED) {
         ScreenManager::instance().goTo(ScreenId::Pause);
     } else if (state == Track::State::INACTIVE) {

@@ -8,10 +8,12 @@
 #include "gui/screens/CountdownScreen.hpp"
 #include "gui/screens/ScreenManager.hpp"
 #include "gui/theme/Theme.hpp"
+#include "gui/Assets.hpp"
 #include "BreathPatterns.hpp"
 
 #include <cstdio>
-#include <algorithm>
+
+using namespace SDK::GUI;
 
 CountdownScreen::CountdownScreen(Model& model)
     : Screen(model)
@@ -20,128 +22,119 @@ CountdownScreen::CountdownScreen(Model& model)
 
 CountdownScreen::~CountdownScreen()
 {
-    if (mTimer) {
-        lv_timer_delete(mTimer);
-        mTimer = nullptr;
-    }
+    lv_anim_delete(this, &CountdownScreen::animExecCb);
 }
 
 void CountdownScreen::build()
 {
-    mButtons = std::make_unique<SDK::LVGL::Buttons>(mRoot);
-    mButtons->set(SDK::LVGL::Buttons::RED,     // L1: Cancel
-                  SDK::LVGL::Buttons::NONE,    // L2: None
-                  SDK::LVGL::Buttons::GREEN,   // R1: Skip & Start
-                  SDK::LVGL::Buttons::NONE);   // R2: None
+    using F = Theme::Font;
 
-    // Background track ring
-    Theme::arc(mRoot, 120, 120, 95, 6, 0, 360, SDK::GUI::Color::TEAL_DARK, false);
+    mRing    = std::make_unique<Widgets::TimerRing>(mRoot, Color::TEAL);
+    mButtons = std::make_unique<Widgets::Buttons>(mRoot);
+    mButtons->set(Widgets::Buttons::NONE,
+                  Widgets::Buttons::NONE,
+                  Widgets::Buttons::AMBER,
+                  Widgets::Buttons::WHITE);
 
-    // Active animated countdown arc
-    mCountdownArc = Theme::arc(mRoot, 120, 120, 95, 8, 0, 360, SDK::GUI::Color::CYAN_PURE, true);
+    Theme::image(mRoot, &img_tickgreen_22x17, 186, 60);
+    Theme::image(mRoot, &img_crosswhite_17x17, 187, 163);
 
-    // Header
-    mTitleLabel = Theme::label(mRoot, Theme::Font::SemiBold20, "GET READY", 0, 24, 240,
-                               LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::CYAN_PURE);
+    Theme::hline(mRoot, 35, 81, 170, Color::GRAY_DARK);
+    Theme::hline(mRoot, 35, 113, 170, Color::GRAY_DARK);
 
-    // Selected Pattern Name
-    const Settings& s = mModel.getSettings();
-    const FreshBreath::BreathPattern& p = FreshBreath::PatternRegistry::getPattern(s.selectedPatternIndex);
-    mPatternLabel = Theme::label(mRoot, Theme::Font::Regular14, p.displayName, 0, 48, 240,
-                                 LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::AQUA);
-
-    // Center Big Countdown Number
-    mCountLabel = Theme::label(mRoot, Theme::Font::SemiBold60, "10", 0, 80, 240,
-                               LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::WHITE);
-
-    // Subtext prompt
-    mHintLabel = Theme::label(mRoot, Theme::Font::Regular14, "Settle in and relax...", 0, 154, 240,
-                              LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
-
-    // Nav prompt
-    mNavLabel = Theme::label(mRoot, Theme::Font::Regular14, "L1: Cancel • R1: Skip", 0, 196, 240,
-                             LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
+    mPattern = Theme::label(mRoot, F::SemiBold20, "", 35, 55, 145, LV_TEXT_ALIGN_CENTER, Color::TEAL);
+    mRatio   = Theme::label(mRoot, F::Medium18,   "", 35, 87, 145, LV_TEXT_ALIGN_CENTER, Color::WHITE);
+    mTarget  = Theme::label(mRoot, F::Medium18,   "", 35, 119, 145, LV_TEXT_ALIGN_CENTER, Color::WHITE);
+    mCount   = Theme::label(mRoot, F::SemiBold60, "10", 70, 142, 100);
 }
 
 void CountdownScreen::onShow()
 {
-    mSecondsLeft = 10;
-    updateCountdown();
+    mStarted        = false;
+    mLastShownCount = -1;
 
-    if (!mTimer) {
-        mTimer = lv_timer_create(onTimerTick, 1000, this);
+    const auto& s = mModel.getSettings();
+    const auto& p = FreshBreath::PatternRegistry::getPattern(s.selectedPatternIndex);
+
+    lv_label_set_text(mPattern, p.displayName);
+
+    char ratioBuf[32];
+    std::snprintf(ratioBuf, sizeof(ratioBuf), "Ratio %s", p.ratioLabel);
+    lv_label_set_text(mRatio, ratioBuf);
+
+    char targetBuf[32];
+    if (s.targetDurationSec == 0) {
+        std::snprintf(targetBuf, sizeof(targetBuf), "Open Session");
     } else {
-        lv_timer_reset(mTimer);
+        std::snprintf(targetBuf, sizeof(targetBuf), "%u min • Get Ready",
+                      static_cast<unsigned>(s.targetDurationSec / 60));
     }
+    lv_label_set_text(mTarget, targetBuf);
+
+    mRing->setProgress(1.0f);
+
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, this);
+    lv_anim_set_exec_cb(&a, &CountdownScreen::animExecCb);
+    lv_anim_set_completed_cb(&a, &CountdownScreen::animReadyCb);
+    lv_anim_set_values(&a, 0, static_cast<int32_t>(kTimeoutMs));
+    lv_anim_set_duration(&a, kTimeoutMs);
+    lv_anim_start(&a);
 }
 
 void CountdownScreen::onHide()
 {
-    if (mTimer) {
-        lv_timer_delete(mTimer);
-        mTimer = nullptr;
-    }
-}
-
-void CountdownScreen::onTimerTick(lv_timer_t* timer)
-{
-    auto* self = static_cast<CountdownScreen*>(lv_timer_get_user_data(timer));
-    if (!self) return;
-
-    self->mSecondsLeft--;
-    if (self->mSecondsLeft <= 0) {
-        if (self->mTimer) {
-            lv_timer_delete(self->mTimer);
-            self->mTimer = nullptr;
-        }
-        self->startBreathing();
-    } else {
-        self->updateCountdown();
-    }
-}
-
-void CountdownScreen::updateCountdown()
-{
-    if (mCountLabel) {
-        char buf[8];
-        std::snprintf(buf, sizeof(buf), "%d", mSecondsLeft);
-        lv_label_set_text(mCountLabel, buf);
-    }
-
-    if (mCountdownArc) {
-        int32_t progress = (static_cast<int32_t>(mSecondsLeft) * 360) / 10;
-        progress = std::max<int32_t>(0, std::min<int32_t>(360, progress));
-        Theme::setArc(mCountdownArc, 0, progress);
-    }
-}
-
-void CountdownScreen::startBreathing()
-{
-    const Settings& s = mModel.getSettings();
-    mModel.startTrack(s.selectedPatternIndex, s.targetDurationSec);
-    ScreenManager::instance().goTo(ScreenId::Breath);
+    lv_anim_delete(this, &CountdownScreen::animExecCb);
 }
 
 void CountdownScreen::onKey(uint8_t code)
 {
     switch (code) {
-        case SDK::GUI::Button::R1: // Skip countdown and start immediately
-            if (mTimer) {
-                lv_timer_delete(mTimer);
-                mTimer = nullptr;
-            }
+        case Btn::R1: // Skip countdown & start immediately
             startBreathing();
             break;
 
-        case SDK::GUI::Button::L1: // Cancel and return to main screen
-            if (mTimer) {
-                lv_timer_delete(mTimer);
-                mTimer = nullptr;
-            }
+        case Btn::R2: // Back -> cancel & return to MainScreen
+            lv_anim_delete(this, &CountdownScreen::animExecCb);
             ScreenManager::instance().goTo(ScreenId::Main);
             break;
 
         default:
             break;
     }
+}
+
+void CountdownScreen::animExecCb(void* var, int32_t value)
+{
+    auto* self = static_cast<CountdownScreen*>(var);
+    const float rem = 1.0f - static_cast<float>(value) / static_cast<float>(kTimeoutMs);
+    self->mRing->setProgress(rem);
+
+    int32_t shown = static_cast<int32_t>(rem * kCountTicks) + 1;
+    if (shown > kCountTicks) shown = kCountTicks;
+    if (shown < 1) shown = 1;
+
+    if (shown != self->mLastShownCount) {
+        self->mLastShownCount = shown;
+        lv_label_set_text_fmt(self->mCount, "%d", static_cast<int>(shown));
+    }
+}
+
+void CountdownScreen::animReadyCb(lv_anim_t* a)
+{
+    auto* self = static_cast<CountdownScreen*>(a->var);
+    self->startBreathing();
+}
+
+void CountdownScreen::startBreathing()
+{
+    if (mStarted) return;
+    mStarted = true;
+
+    lv_anim_delete(this, &CountdownScreen::animExecCb);
+
+    const auto& s = mModel.getSettings();
+    mModel.startTrack(s.selectedPatternIndex, s.targetDurationSec);
+    ScreenManager::instance().goTo(ScreenId::Breath);
 }

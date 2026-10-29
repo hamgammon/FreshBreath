@@ -1,16 +1,19 @@
 /**
  ******************************************************************************
  * @file    MainScreen.cpp
- * @brief   FreshBreath main home screen implementation.
+ * @brief   Main WheelMenu screen implementation for FreshBreath.
  ******************************************************************************
  */
 
 #include "gui/screens/MainScreen.hpp"
 #include "gui/screens/ScreenManager.hpp"
 #include "gui/theme/Theme.hpp"
+#include "gui/Assets.hpp"
 #include "BreathPatterns.hpp"
 
 #include <cstdio>
+
+using namespace SDK::GUI;
 
 MainScreen::MainScreen(Model& model)
     : Screen(model)
@@ -19,81 +22,150 @@ MainScreen::MainScreen(Model& model)
 
 void MainScreen::build()
 {
-    mButtons = std::make_unique<SDK::LVGL::Buttons>(mRoot);
-    mButtons->set(SDK::LVGL::Buttons::WHITE,   // L1: Exit / Summary
-                  SDK::LVGL::Buttons::AMBER,   // L2: Pattern
-                  SDK::LVGL::Buttons::GREEN,   // R1: Start
-                  SDK::LVGL::Buttons::AMBER);  // R2: Duration
+    populateItems();
 
-    // App header
-    mTitleLabel = Theme::label(mRoot, Theme::Font::SemiBold20, "FRESH BREATH", 0, 15, 240,
-                               LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::CYAN_PURE);
-
-    mTimeLabel = Theme::label(mRoot, Theme::Font::Regular14, "12:00", 0, 38, 240,
-                              LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
-
-    // Selected Pattern Box
-    mPatternCard = Theme::container(mRoot, 20, 62, 200, 72);
-    lv_obj_set_style_bg_color(mPatternCard, Theme::rgb(SDK::GUI::Color::TEAL_DARK), 0);
-    lv_obj_set_style_bg_opa(mPatternCard, LV_OPA_50, 0);
-    lv_obj_set_style_radius(mPatternCard, 8, 0);
-
-    Theme::label(mPatternCard, Theme::Font::Regular14, "PATTERN [L2]", 0, 6, 200,
-                 LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::AQUA);
-
-    mPatternName = Theme::label(mPatternCard, Theme::Font::SemiBold20, "Box 4-4-4-4", 0, 24, 200,
-                                LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::WHITE);
-
-    mPatternRatio = Theme::label(mPatternCard, Theme::Font::Regular14, "4s : 4s : 4s : 4s", 0, 48, 200,
-                                 LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GRAY);
-
-    // Target Duration Box
-    lv_obj_t* durCard = Theme::container(mRoot, 20, 140, 200, 45);
-    lv_obj_set_style_bg_color(durCard, Theme::rgb(SDK::GUI::Color::GRAY_DARK), 0);
-    lv_obj_set_style_bg_opa(durCard, LV_OPA_40, 0);
-    lv_obj_set_style_radius(durCard, 8, 0);
-
-    Theme::label(durCard, Theme::Font::Regular14, "DURATION [R2]", 0, 4, 200,
-                 LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::YELLOW_DARK);
-
-    mDurationLabel = Theme::label(durCard, Theme::Font::SemiBold20, "5 min", 0, 20, 200,
-                                  LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::WHITE);
-
-    // Start prompt
-    mHintLabel = Theme::label(mRoot, Theme::Font::SemiBold20, "Press R1 to Start", 0, 198, 240,
-                              LV_TEXT_ALIGN_CENTER, SDK::GUI::Color::GREEN);
-
-    updateCards();
-    updateTimeLabel();
+    mMenu    = std::make_unique<Widgets::WheelMenu>(mRoot, mItems, kItemCount);
+    mTitle   = std::make_unique<Widgets::Title>(mRoot, "FRESHBREATH");
+    mButtons = std::make_unique<Widgets::Buttons>(mRoot);
+    mButtons->set(Widgets::Buttons::NONE,
+                  Widgets::Buttons::NONE,
+                  Widgets::Buttons::AMBER,
+                  Widgets::Buttons::WHITE);
 }
 
 void MainScreen::onShow()
 {
-    updateCards();
-    updateTimeLabel();
+    if (mModel.getTrackState() == Track::State::ACTIVE) {
+        ScreenManager::instance().goTo(ScreenId::Breath);
+        return;
+    }
+    if (mModel.getTrackState() == Track::State::PAUSED) {
+        ScreenManager::instance().goTo(ScreenId::Pause);
+        return;
+    }
+
+    populateItems();
+    mMenu->refresh();
+    mMenu->select(mModel.getMainCursor());
+}
+
+void MainScreen::populateItems()
+{
+    using Style = Widgets::WheelMenu::Style;
+
+    const auto& s = mModel.getSettings();
+    const auto& p = FreshBreath::PatternRegistry::getPattern(s.selectedPatternIndex);
+    const auto& sum = mModel.getSummary();
+
+    if (s.targetDurationSec == 0) {
+        std::snprintf(mTimeTip, sizeof(mTimeTip), "Open");
+    } else {
+        std::snprintf(mTimeTip, sizeof(mTimeTip), "%u min",
+                      static_cast<unsigned>(s.targetDurationSec / 60));
+    }
+
+    std::snprintf(mStartTip, sizeof(mStartTip), "%s  %s", p.displayName, mTimeTip);
+    std::snprintf(mPatternTip, sizeof(mPatternTip), "%s (%s)", p.displayName, p.ratioLabel);
+
+    const bool hasSummary = (sum.duration > 0);
+    if (hasSummary) {
+        unsigned mins = static_cast<unsigned>(sum.duration / 60);
+        unsigned secs = static_cast<unsigned>(sum.duration % 60);
+        std::snprintf(mSummaryTip, sizeof(mSummaryTip), "%02u:%02u  %u cyc",
+                      mins, secs, static_cast<unsigned>(sum.cycles));
+    } else {
+        std::snprintf(mSummaryTip, sizeof(mSummaryTip), "No workouts yet");
+    }
+
+    // 0: Start
+    mItems[ITEM_START]            = {};
+    mItems[ITEM_START].style      = Style::Tip;
+    mItems[ITEM_START].text       = "Start";
+    mItems[ITEM_START].centerFont = &poppins_semibold_30;
+    mItems[ITEM_START].tip        = mStartTip;
+    mItems[ITEM_START].tipColor   = Color::TEAL;
+
+    // 1: Pattern
+    mItems[ITEM_PATTERN]            = {};
+    mItems[ITEM_PATTERN].style      = Style::Tip;
+    mItems[ITEM_PATTERN].text       = "Pattern";
+    mItems[ITEM_PATTERN].centerFont = &poppins_semibold_25;
+    mItems[ITEM_PATTERN].tip        = mPatternTip;
+    mItems[ITEM_PATTERN].tipColor   = Color::TEAL;
+
+    // 2: Time
+    mItems[ITEM_TIME]            = {};
+    mItems[ITEM_TIME].style      = Style::Tip;
+    mItems[ITEM_TIME].text       = "Time";
+    mItems[ITEM_TIME].centerFont = &poppins_semibold_25;
+    mItems[ITEM_TIME].tip        = mTimeTip;
+    mItems[ITEM_TIME].tipColor   = Color::TEAL;
+
+    // 3: Haptics
+    mItems[ITEM_HAPTICS]             = {};
+    mItems[ITEM_HAPTICS].style       = Style::Toggle;
+    mItems[ITEM_HAPTICS].text        = "Haptics";
+    mItems[ITEM_HAPTICS].centerFont  = &poppins_semibold_25;
+    mItems[ITEM_HAPTICS].toggleState = s.hapticsEnabled;
+
+    // 4: Summary
+    mItems[ITEM_SUMMARY]            = {};
+    mItems[ITEM_SUMMARY].style      = Style::Tip;
+    mItems[ITEM_SUMMARY].text       = "Summary";
+    mItems[ITEM_SUMMARY].centerFont = &poppins_semibold_25;
+    mItems[ITEM_SUMMARY].tip        = mSummaryTip;
+    mItems[ITEM_SUMMARY].tipColor   = hasSummary ? Color::TEAL : Color::GRAY;
 }
 
 void MainScreen::onKey(uint8_t code)
 {
     switch (code) {
-        case SDK::GUI::Button::R1: { // Start breathing session (with 10-second preparation)
-            ScreenManager::instance().goTo(ScreenId::Countdown);
+        case Btn::L1:
+            mMenu->prev();
+            break;
+
+        case Btn::L2:
+            mMenu->next();
+            break;
+
+        case Btn::R1: {
+            const uint16_t sel = mMenu->selected();
+            mModel.setMainCursor(sel);
+
+            switch (sel) {
+                case ITEM_START:
+                    ScreenManager::instance().goTo(ScreenId::Countdown);
+                    break;
+
+                case ITEM_PATTERN:
+                    ScreenManager::instance().goTo(ScreenId::PatternSelect);
+                    break;
+
+                case ITEM_TIME:
+                    ScreenManager::instance().goTo(ScreenId::DurationSelect);
+                    break;
+
+                case ITEM_HAPTICS: {
+                    Settings s = mModel.getSettings();
+                    s.hapticsEnabled = !s.hapticsEnabled;
+                    mModel.saveSettings(s);
+                    populateItems();
+                    mMenu->refresh();
+                } break;
+
+                case ITEM_SUMMARY:
+                    if (mModel.getSummary().duration > 0) {
+                        ScreenManager::instance().goTo(ScreenId::Summary);
+                    }
+                    break;
+
+                default:
+                    break;
+            }
         } break;
 
-        case SDK::GUI::Button::L2: // Change pattern
-            ScreenManager::instance().goTo(ScreenId::PatternSelect);
-            break;
-
-        case SDK::GUI::Button::R2: // Change duration
-            ScreenManager::instance().goTo(ScreenId::DurationSelect);
-            break;
-
-        case SDK::GUI::Button::L1: // Summary if available, else exit
-            if (mModel.getSummary().duration > 0) {
-                ScreenManager::instance().goTo(ScreenId::Summary);
-            } else {
-                mModel.exitApp();
-            }
+        case Btn::R2:
+            mModel.exitApp();
             break;
 
         default:
@@ -101,53 +173,29 @@ void MainScreen::onKey(uint8_t code)
     }
 }
 
-void MainScreen::updateCards()
-{
-    const Settings& s = mModel.getSettings();
-    const FreshBreath::BreathPattern& p = FreshBreath::PatternRegistry::getPattern(s.selectedPatternIndex);
-
-    if (mPatternName) {
-        lv_label_set_text(mPatternName, p.displayName);
-    }
-    if (mPatternRatio) {
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%u : %u : %u : %u",
-                      p.inhaleSec, p.holdInSec, p.exhaleSec, p.holdOutSec);
-        lv_label_set_text(mPatternRatio, buf);
-    }
-    if (mDurationLabel) {
-        if (s.targetDurationSec == 0) {
-            lv_label_set_text(mDurationLabel, "Open (No Limit)");
-        } else {
-            char buf[32];
-            std::snprintf(buf, sizeof(buf), "%u min", s.targetDurationSec / 60);
-            lv_label_set_text(mDurationLabel, buf);
-        }
-    }
-}
-
-void MainScreen::updateTimeLabel()
-{
-    if (!mTimeLabel) return;
-    const std::tm& t = mModel.getTime();
-    char buf[16];
-    std::snprintf(buf, sizeof(buf), "%02d:%02d", t.tm_hour, t.tm_min);
-    lv_label_set_text(mTimeLabel, buf);
-}
-
-void MainScreen::onTimeUpdated(const std::tm& time)
-{
-    (void)time;
-    updateTimeLabel();
-}
-
-void MainScreen::onBatteryUpdated(uint8_t level)
-{
-    (void)level;
-}
-
 void MainScreen::onSettingsUpdated(const Settings& settings)
 {
     (void)settings;
-    updateCards();
+    populateItems();
+    if (mMenu) {
+        mMenu->refresh();
+    }
+}
+
+void MainScreen::onSummaryUpdated(const ActivitySummary& summary)
+{
+    (void)summary;
+    populateItems();
+    if (mMenu) {
+        mMenu->refresh();
+    }
+}
+
+void MainScreen::onTrackStateChanged(Track::State state)
+{
+    if (state == Track::State::ACTIVE) {
+        ScreenManager::instance().goTo(ScreenId::Breath);
+    } else if (state == Track::State::PAUSED) {
+        ScreenManager::instance().goTo(ScreenId::Pause);
+    }
 }

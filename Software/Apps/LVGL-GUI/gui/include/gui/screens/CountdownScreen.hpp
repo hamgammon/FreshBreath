@@ -1,45 +1,47 @@
 /**
  ******************************************************************************
  * @file    CountdownScreen.hpp
- * @brief   10-second preparation countdown screen before breathing begins.
+ * @brief   10-second preparation countdown screen (modeled after RunLVGL).
  ******************************************************************************
  */
 
 #ifndef COUNTDOWN_SCREEN_HPP
 #define COUNTDOWN_SCREEN_HPP
 
-#include "gui/screens/Screen.hpp"
-#include "SDK/GUI/LVGL/Buttons.hpp"
-
 #include <memory>
-#include <cstdint>
+#include "gui/screens/Screen.hpp"
+#include "gui/widgets/Widgets.hpp"
 
 class CountdownScreen : public Screen {
 public:
     explicit CountdownScreen(Model& model);
     ~CountdownScreen() override;
 
-    void build() override;
     void onShow() override;
     void onHide() override;
     void onKey(uint8_t code) override;
 
+protected:
+    void build() override;
+
 private:
-    void updateCountdown();
+    static constexpr uint32_t kTimeoutMs  = 10000;
+    static constexpr int32_t  kCountTicks = 10;
+
+    static void animExecCb(void* var, int32_t value);
+    static void animReadyCb(lv_anim_t* a);
     void startBreathing();
-    static void onTimerTick(lv_timer_t* timer);
 
-    lv_timer_t* mTimer = nullptr;
-    int8_t mSecondsLeft = 10;
+    std::unique_ptr<Widgets::TimerRing> mRing;
+    std::unique_ptr<Widgets::Buttons>   mButtons;
 
-    lv_obj_t* mTitleLabel = nullptr;
-    lv_obj_t* mPatternLabel = nullptr;
-    lv_obj_t* mCountLabel = nullptr;
-    lv_obj_t* mHintLabel = nullptr;
-    lv_obj_t* mCountdownArc = nullptr;
-    lv_obj_t* mNavLabel = nullptr;
+    lv_obj_t* mPattern = nullptr;
+    lv_obj_t* mRatio   = nullptr;
+    lv_obj_t* mTarget  = nullptr;
+    lv_obj_t* mCount   = nullptr;
 
-    std::unique_ptr<SDK::LVGL::Buttons> mButtons;
+    int32_t mLastShownCount = -1;
+    bool    mStarted        = false;
 };
 
 #endif // COUNTDOWN_SCREEN_HPP

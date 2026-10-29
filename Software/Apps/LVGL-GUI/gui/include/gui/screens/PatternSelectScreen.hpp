@@ -1,15 +1,17 @@
 /**
  ******************************************************************************
  * @file    PatternSelectScreen.hpp
- * @brief   Screen to browse and select breathwork patterns.
+ * @brief   WheelMenu screen to select breathwork protocol.
  ******************************************************************************
  */
 
 #ifndef PATTERN_SELECT_SCREEN_HPP
 #define PATTERN_SELECT_SCREEN_HPP
 
-#include "gui/screens/Screen.hpp"
 #include <memory>
+#include "gui/screens/Screen.hpp"
+#include "gui/widgets/Widgets.hpp"
+#include "BreathPatterns.hpp"
 
 class PatternSelectScreen : public Screen {
 public:
@@ -23,18 +25,16 @@ protected:
     void build() override;
 
 private:
-    void updateView();
+    static constexpr uint16_t kCount = FreshBreath::PatternRegistry::kPatternCount;
 
-    std::unique_ptr<SDK::LVGL::Buttons> mButtons;
+    void populateItems();
 
-    uint8_t mCurrentIndex = 0;
+    Widgets::WheelMenu::Item mItems[kCount]{};
+    char mTips[kCount][32]{};
 
-    lv_obj_t* mTitleLabel     = nullptr;
-    lv_obj_t* mPatternLabel   = nullptr;
-    lv_obj_t* mRatioLabel     = nullptr;
-    lv_obj_t* mPhasesLabel    = nullptr;
-    lv_obj_t* mBenefitLabel   = nullptr;
-    lv_obj_t* mNavLabel       = nullptr;
+    std::unique_ptr<Widgets::WheelMenu> mMenu;
+    std::unique_ptr<Widgets::Title>     mTitle;
+    std::unique_ptr<Widgets::Buttons>   mButtons;
 };
 
 #endif // PATTERN_SELECT_SCREEN_HPP
