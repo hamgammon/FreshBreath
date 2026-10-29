@@ -30,8 +30,22 @@ public:
     struct RecordData {
         std::time_t timestamp      = 0;
         float       heartRate      = 0.0f;
+        uint8_t     hrSource       = 0;
+        uint8_t     hrOpticalBpm   = 0;
+        uint8_t     hrExternalBpm  = 0;
         uint8_t     batteryLevel   = 0;
         uint16_t    batteryVoltage = 0;
+    };
+
+    struct LapData {
+        std::time_t timestamp       = 0;
+        std::time_t timeStart       = 0;
+        std::time_t duration        = 0;
+        std::time_t elapsed         = 0;
+        float       hrAvg           = 0.0f;
+        float       hrMax           = 0.0f;
+        float       calories        = 0.0f;
+        float       restingCalories = 0.0f;
     };
 
     struct TrackData {
@@ -55,25 +69,32 @@ public:
     void pause(std::time_t timestamp);
     void resume(std::time_t timestamp);
     void addRecord(const RecordData& record);
+    void addLap(const LapData& lap);
     bool stop(const TrackData& track);
     void discard();
 
     bool recoverInterrupted();
 
 private:
-    static constexpr uint8_t L_FILE_ID     = 0;
-    static constexpr uint8_t L_DEV_ID      = 1;
-    static constexpr uint8_t L_FIELD_DESC  = 2;
-    static constexpr uint8_t L_EVENT       = 3;
-    static constexpr uint8_t L_RECORD      = 4;
-    static constexpr uint8_t L_WORKOUT     = 5;
-    static constexpr uint8_t L_SESSION     = 6;
-    static constexpr uint8_t L_ACTIVITY    = 7;
+    enum Local : uint8_t {
+        L_FILE_ID = 0,
+        L_DEV_ID,
+        L_FIELD_DESC,
+        L_EVENT,
+        L_RECORD,
+        L_LAP,
+        L_SESSION,
+        L_ACTIVITY,
+    };
 
-    static constexpr uint8_t DF_BATTERY_LEVEL  = 0;
-    static constexpr uint8_t DF_WORKOUT_TITLE  = 1;
-    static constexpr uint8_t DF_PATTERN_NAME   = 2;
-    static constexpr uint8_t DF_CYCLES         = 3;
+    enum DevField : uint8_t {
+        DF_BATTERY_LEVEL   = 2,
+        DF_BATTERY_VOLTAGE = 3,
+        DF_LAP_RESTING_CAL = 4,
+        DF_HR_SOURCE       = 5,
+        DF_HR_OPTICAL      = 6,
+        DF_HR_EXTERNAL     = 7,
+    };
 
     static constexpr std::time_t skFlushIntervalSec = 30;
 
@@ -93,8 +114,8 @@ private:
     std::unique_ptr<SDK::Interface::IFile> mFile;
     std::unique_ptr<SDK::Fit::FitWriter>   mFit;
     SDK::Fit::RecordingMarker     mMarker;
-
-    std::time_t mLastFlushUtc = 0;
+    uint16_t                      mLapCounter   = 0;
+    std::time_t                   mLastFlushUtc = 0;
 };
 
 #endif // ACTIVITY_WRITER_HPP

@@ -27,6 +27,7 @@ ActivityWriter::ActivityWriter(const SDK::Kernel& kernel, const char* pathToDir)
 
 void ActivityWriter::start(const AppInfo& info)
 {
+    mLapCounter   = 0;
     mLastFlushUtc = info.timestamp;
 
     if (!createAndOpenFile(info.timestamp)) {
@@ -66,11 +67,13 @@ void ActivityWriter::start(const AppInfo& info)
         mFit->data(L_DEV_ID).bytes(appId, sizeof(appId)).u8(0).write();
     }
 
-    // Developer fields
+    // Developer field descriptions (matching UNA Workout schema)
     writeFieldDescription(DF_BATTERY_LEVEL, "batteryLevel", "%", fit::BaseType::UInt8);
-    writeFieldDescription(DF_WORKOUT_TITLE, "workout_title", nullptr, fit::BaseType::String);
-    writeFieldDescription(DF_PATTERN_NAME, "pattern_name", nullptr, fit::BaseType::String);
-    writeFieldDescription(DF_CYCLES, "cycles_completed", nullptr, fit::BaseType::UInt16);
+    writeFieldDescription(DF_BATTERY_VOLTAGE, "battVoltage", "mV", fit::BaseType::UInt16);
+    writeFieldDescription(DF_LAP_RESTING_CAL, "resting_calories", "kcal", fit::BaseType::UInt16);
+    writeFieldDescription(DF_HR_SOURCE, "hr_source", nullptr, fit::BaseType::UInt8);
+    writeFieldDescription(DF_HR_OPTICAL, "hr_optical", "bpm", fit::BaseType::UInt8);
+    writeFieldDescription(DF_HR_EXTERNAL, "hr_external", "bpm", fit::BaseType::UInt8);
 
     // event
     mFit->defineMessage(L_EVENT, fit::mesgNum(fit::MesgNum::Event),
@@ -79,7 +82,14 @@ void ActivityWriter::start(const AppInfo& info)
 
     defineRecordMessages();
 
-    // session / activity
+    // lap / session / activity
+    mFit->defineMessage(L_LAP, fit::mesgNum(fit::MesgNum::Lap),
+        {fit::field::Lap::Timestamp, fit::field::Lap::StartTime,
+         fit::field::Lap::TotalElapsedTime, fit::field::Lap::TotalTimerTime,
+         fit::field::Lap::MessageIndex, fit::field::Lap::AvgHeartRate,
+         fit::field::Lap::MaxHeartRate, fit::field::Lap::TotalCalories},
+        {{DF_LAP_RESTING_CAL, 2, 0}});
+
     mFit->defineMessage(L_SESSION, fit::mesgNum(fit::MesgNum::Session),
         {fit::field::Session::Timestamp, fit::field::Session::StartTime,
          fit::field::Session::TotalElapsedTime, fit::field::Session::TotalTimerTime,
@@ -103,7 +113,10 @@ void ActivityWriter::defineRecordMessages()
 {
     mFit->defineMessage(L_RECORD, fit::mesgNum(fit::MesgNum::Record),
         {fit::field::Record::Timestamp, fit::field::Record::HeartRate},
-        {{DF_BATTERY_LEVEL, 1, 0}});
+        {{DF_BATTERY_LEVEL, 1, 0},
+         {DF_HR_SOURCE, 1, 0},
+         {DF_HR_OPTICAL, 1, 0},
+         {DF_HR_EXTERNAL, 1, 0}});
 }
 
 void ActivityWriter::writeFieldDescription(uint8_t devFieldNum, const char* name,
@@ -155,6 +168,9 @@ void ActivityWriter::addRecord(const RecordData& record)
         d.u8(static_cast<uint8_t>(fit::baseTypeInvalid(fit::BaseType::UInt8)));
     }
     d.u8(record.batteryLevel);
+    d.u8(record.hrSource);
+    d.u8(record.hrOpticalBpm);
+    d.u8(record.hrExternalBpm);
     d.write();
 
     if (record.timestamp - mLastFlushUtc >= skFlushIntervalSec) {
@@ -162,6 +178,30 @@ void ActivityWriter::addRecord(const RecordData& record)
             mMarker.update(static_cast<uint32_t>(mFile->getPosition()));
             mLastFlushUtc = record.timestamp;
         }
+    }
+}
+
+void ActivityWriter::addLap(const LapData& lap)
+{
+    if (!mFit) {
+        return;
+    }
+    mFit->data(L_LAP)
+        .u32(unixToFitTimestamp(lap.timestamp))
+        .u32(unixToFitTimestamp(lap.timeStart))
+        .u32(static_cast<uint32_t>(lap.elapsed * 1000))
+        .u32(static_cast<uint32_t>(lap.duration * 1000))
+        .u16(mLapCounter)
+        .u8(static_cast<uint8_t>(lap.hrAvg + 0.5f))
+        .u8(static_cast<uint8_t>(lap.hrMax + 0.5f))
+        .u16(static_cast<uint16_t>(lap.calories + 0.5f))
+        .u16(static_cast<uint16_t>(lap.restingCalories + 0.5f))
+        .write();
+    mLapCounter++;
+
+    if (mFile->flush()) {
+        mMarker.update(static_cast<uint32_t>(mFile->getPosition()));
+        mLastFlushUtc = lap.timestamp;
     }
 }
 
@@ -173,21 +213,6 @@ bool ActivityWriter::stop(const TrackData& track)
 
     bool ok = mFit->ok();
 
-    // Define and write Workout message with workout title
-    const uint8_t wktNameLen = static_cast<uint8_t>(track.workoutTitle.length() + 1);
-    mFit->defineMessage(L_WORKOUT, fit::mesgNum(fit::MesgNum::Workout),
-        {fit::field::Workout::Sport,
-         fit::field::Workout::SubSport,
-         fit::field::Workout::NumValidSteps,
-         {fit::field::Workout::kWktNameNum, fit::BaseType::String, wktNameLen}});
-
-    ok = mFit->data(L_WORKOUT)
-        .u8(static_cast<uint8_t>(fit::Sport::Training))
-        .u8(static_cast<uint8_t>(fit::SubSport::Generic))
-        .u16(1)
-        .str(track.workoutTitle.c_str(), wktNameLen)
-        .write() && ok;
-
     // Session message
     ok = mFit->data(L_SESSION)
         .u32(unixToFitTimestamp(track.timestamp))
@@ -195,8 +220,8 @@ bool ActivityWriter::stop(const TrackData& track)
         .u32(static_cast<uint32_t>(track.elapsed * 1000))
         .u32(static_cast<uint32_t>(track.duration * 1000))
         .u16(0)  // message_index
-        .u16(1)  // num_laps
-        .u8(static_cast<uint8_t>(fit::Sport::Training))
+        .u16(mLapCounter)
+        .u8(static_cast<uint8_t>(fit::Sport::Generic))
         .u8(static_cast<uint8_t>(fit::SubSport::Generic))
         .u8(static_cast<uint8_t>(track.hrAvg + 0.5f))
         .u8(static_cast<uint8_t>(track.hrMax + 0.5f))
@@ -228,7 +253,10 @@ bool ActivityWriter::stop(const TrackData& track)
 
     if (ok) {
         mMarker.remove();
-        saveSummary(track);
+    }
+
+    if (ok && !saveSummary(track)) {
+        LOG_ERROR("Activity summary (.json) save failed; FIT is durable and registered\n");
     }
     return ok;
 }
@@ -317,15 +345,7 @@ bool ActivityWriter::saveSummary(const TrackData& track)
     writer.add("time_start", static_cast<uint32_t>(track.timeStart));
     writer.add("duration", static_cast<uint32_t>(track.duration));
     writer.add("hr_avg", track.hrAvg);
-    writer.add("hr_max", track.hrMax);
-    writer.add("hr_min", track.hrMin);
-    writer.add("calories", track.calories);
     writer.add("activity_type", "workout");
-    writer.add("activity_name", track.workoutTitle.c_str());
-    writer.add("title", track.workoutTitle.c_str());
-    writer.add("sport", "training");
-    writer.add("pattern", track.patternName.c_str());
-    writer.add("cycles", static_cast<uint32_t>(track.cycles));
     writer.endMap();
 
     const bool ok = mFile->flush();

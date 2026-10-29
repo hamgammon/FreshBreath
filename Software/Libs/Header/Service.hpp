@@ -55,6 +55,7 @@ private:
 
     void transitionToNextPhase();
     void triggerPhaseHaptic(FreshBreath::BreathPhase phase);
+    void notifyNewActivity();
 
     SDK::Kernel& mKernel;
 
@@ -76,11 +77,15 @@ private:
     Track::Data  mTrackData{};
     FreshBreath::BreathPattern mCurrentPattern;
     std::time_t  mStartUtc = 0;
+    std::time_t  mPauseUtc = 0;
     std::time_t  mLastRecordUtc = 0;
 
     // HR stats accumulation
     float    mHrSum = 0.0f;
     uint32_t mHrCount = 0;
+    uint8_t  mHrSource = 0;
+    uint8_t  mHrOpticalBpm = 0;
+    uint8_t  mHrExternalBpm = 0;
     uint8_t  mBatteryLevel = 100;
 };
 

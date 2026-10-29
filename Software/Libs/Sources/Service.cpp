@@ -51,6 +51,7 @@ void Service::run()
 
     if (mActivityWriter.recoverInterrupted()) {
         LOG_INFO("Recovered interrupted activity\n");
+        notifyNewActivity();
     }
 
     SDK::Timer guiInitTimeout(TIMER_SECONDS(8));
@@ -192,6 +193,7 @@ void Service::startTrack(uint8_t patternIndex, uint16_t targetDurationSec)
     mSettingsSerializer.save(mSettings);
 
     mStartUtc = std::time(nullptr);
+    mPauseUtc = 0;
     mLastRecordUtc = mStartUtc;
 
     mTrackData = Track::Data{};
@@ -210,6 +212,9 @@ void Service::startTrack(uint8_t patternIndex, uint16_t targetDurationSec)
 
     mHrSum = 0.0f;
     mHrCount = 0;
+    mHrSource = 0;
+    mHrOpticalBpm = 0;
+    mHrExternalBpm = 0;
 
     mTrackState = Track::State::ACTIVE;
 
@@ -231,7 +236,8 @@ void Service::pauseTrack()
 {
     if (mTrackState == Track::State::ACTIVE) {
         mTrackState = Track::State::PAUSED;
-        mActivityWriter.pause(std::time(nullptr));
+        mPauseUtc = std::time(nullptr);
+        mActivityWriter.pause(mPauseUtc);
         playVibroPattern(SDK::Message::RequestVibroPlay::Effect::STRONG_BUZZ_100, 2, 100);
         if (!mSettings.vibrateOnly) {
             static const SDK::Message::RequestBuzzerPlay::Note kPauseNotes[] = {
@@ -249,6 +255,7 @@ void Service::resumeTrack()
 {
     if (mTrackState == Track::State::PAUSED) {
         mTrackState = Track::State::ACTIVE;
+        mPauseUtc = 0;
         mActivityWriter.resume(std::time(nullptr));
         triggerPhaseHaptic(mTrackData.phase);
         SDK::send_msg<CustomMessage::TrackStateUpd>(mKernel, mTrackState);
@@ -263,7 +270,7 @@ void Service::stopTrack(bool discard)
 
     disconnectSensors();
 
-    if (discard) {
+    if (discard || mTrackData.totalTime == 0) {
         mActivityWriter.discard();
         mTrackState = Track::State::INACTIVE;
         SDK::send_msg<CustomMessage::TrackStateUpd>(mKernel, mTrackState);
@@ -271,23 +278,45 @@ void Service::stopTrack(bool discard)
         return;
     }
 
-    std::time_t endUtc = std::time(nullptr);
+    if (mTrackState != Track::State::PAUSED) {
+        mPauseUtc = std::time(nullptr);
+        mActivityWriter.pause(mPauseUtc);
+    }
+
+    const std::time_t endUtc = (mPauseUtc >= mStartUtc && mPauseUtc > 0) ? mPauseUtc : std::time(nullptr);
+    const std::time_t activeSec = std::max<std::time_t>(1, mTrackData.totalTime);
+    const std::time_t elapsedSec = std::max<std::time_t>(activeSec, endUtc - mStartUtc);
+
+    ActivityWriter::LapData fitLap{};
+    fitLap.timestamp       = endUtc;
+    fitLap.timeStart       = mStartUtc;
+    fitLap.duration        = activeSec;
+    fitLap.elapsed         = elapsedSec;
+    fitLap.hrAvg           = mTrackData.hrAvg;
+    fitLap.hrMax           = mTrackData.hrMax;
+    fitLap.calories        = mTrackData.totalCalories;
+    fitLap.restingCalories = mTrackData.totalCalories * 0.85f;
+    mActivityWriter.addLap(fitLap);
 
     ActivityWriter::TrackData track{};
-    track.timestamp = endUtc;
-    track.timeStart = mStartUtc;
-    track.duration = mTrackData.totalTime;
-    track.elapsed = mTrackData.totalTime;
-    track.hrAvg = mTrackData.hrAvg;
-    track.hrMax = mTrackData.hrMax;
-    track.hrMin = (mTrackData.hrMin < 300.0f && mTrackData.hrMin > 0.0f) ? mTrackData.hrMin : mTrackData.hrAvg;
-    track.calories = mTrackData.totalCalories;
+    track.timestamp         = endUtc;
+    track.timeStart         = mStartUtc;
+    track.duration          = activeSec;
+    track.elapsed           = elapsedSec;
+    track.hrAvg             = mTrackData.hrAvg;
+    track.hrMax             = mTrackData.hrMax;
+    track.hrMin             = (mTrackData.hrMin < 300.0f && mTrackData.hrMin > 0.0f) ? mTrackData.hrMin : mTrackData.hrAvg;
+    track.calories          = mTrackData.totalCalories;
     track.metabolicCalories = mTrackData.totalCalories * 0.85f;
-    track.cycles = mTrackData.completedCycles;
-    track.patternName = mCurrentPattern.displayName;
-    track.workoutTitle = mCurrentPattern.workoutTitle;
+    track.cycles            = mTrackData.completedCycles;
+    track.patternName       = mCurrentPattern.displayName;
+    track.workoutTitle      = mCurrentPattern.workoutTitle;
 
-    mActivityWriter.stop(track);
+    if (mActivityWriter.stop(track)) {
+        notifyNewActivity();
+    } else {
+        LOG_ERROR("Activity save failed\n");
+    }
 
     // Save summary for on-device recap screen
     mSummary.utc = track.timeStart;
@@ -317,9 +346,9 @@ void Service::stopTrack(bool discard)
     SDK::send_msg<CustomMessage::SummaryUpd>(mKernel, mSummary);
     SDK::send_msg<CustomMessage::TrackStateUpd>(mKernel, mTrackState);
 
-    LOG_INFO("Saved activity [%s] duration=%llds cycles=%u hrAvg=%.1f\n",
+    LOG_INFO("Saved activity [%s] duration=%llds elapsed=%llds cycles=%u hrAvg=%.1f\n",
              track.workoutTitle.c_str(), static_cast<long long>(track.duration),
-             track.cycles, track.hrAvg);
+             static_cast<long long>(track.elapsed), track.cycles, track.hrAvg);
 }
 
 void Service::processTrackTick()
@@ -331,7 +360,8 @@ void Service::processTrackTick()
     if (mTrackData.targetTime > 0 && mTrackData.totalTime >= mTrackData.targetTime) {
         mTrackData.targetTime = 0; // Allow open continuation if user chooses Resume
         mTrackState = Track::State::PAUSED;
-        mActivityWriter.pause(std::time(nullptr));
+        mPauseUtc = std::time(nullptr);
+        mActivityWriter.pause(mPauseUtc);
 
         playVibroPattern(SDK::Message::RequestVibroPlay::Effect::ALERT_750MS_100, 3, 200);
         if (!mSettings.vibrateOnly) {
@@ -369,9 +399,12 @@ void Service::processTrackTick()
     // Write FIT record
     std::time_t nowUtc = std::time(nullptr);
     ActivityWriter::RecordData record{};
-    record.timestamp = nowUtc;
-    record.heartRate = mTrackData.hr;
-    record.batteryLevel = mBatteryLevel;
+    record.timestamp     = nowUtc;
+    record.heartRate     = mTrackData.hr;
+    record.hrSource      = mHrSource;
+    record.hrOpticalBpm  = mHrOpticalBpm;
+    record.hrExternalBpm = mHrExternalBpm;
+    record.batteryLevel  = mBatteryLevel;
     mActivityWriter.addRecord(record);
 
     SDK::send_msg<CustomMessage::TrackDataUpd>(mKernel, mTrackData);
@@ -519,6 +552,15 @@ void Service::playBuzzerNotes(const SDK::Message::RequestBuzzerPlay::Note notes[
     mKernel.comm.releaseMessage(msg);
 }
 
+void Service::notifyNewActivity()
+{
+    auto* msg = mKernel.comm.allocateMessage<SDK::Message::CommandAppNewActivity>();
+    if (msg) {
+        mKernel.comm.sendMessage(msg);
+        mKernel.comm.releaseMessage(msg);
+    }
+}
+
 void Service::connectSensors()
 {
     if (!mSensorsConnected) {
@@ -542,7 +584,10 @@ void Service::handleSensorsData(uint16_t handle, SDK::Sensor::DataBatch& data)
     if (mSensorHr.matchesDriver(handle) && data.size() > 0) {
         SDK::SensorDataParser::HeartRateEx parser(data[0]);
         if (parser.isDataValid()) {
-            mTrackData.hr = parser.getBpm();
+            mTrackData.hr  = parser.getBpm();
+            mHrSource      = static_cast<uint8_t>(parser.getSource());
+            mHrOpticalBpm  = static_cast<uint8_t>(parser.getOpticalBpm());
+            mHrExternalBpm = static_cast<uint8_t>(parser.getExternalBpm());
         }
     } else if (mSensorBattery.matchesDriver(handle) && data.size() > 0) {
         SDK::SensorDataParser::BatteryLevel parser(data[0]);
