@@ -148,7 +148,7 @@ Ensure the **UNA SDK** is installed and the ST ARM GCC toolchain is on your `PAT
 
 ```bash
 # 1. Set the UNA_SDK environment variable
-export UNA_SDK="/Users/scottcowie/repos/una-sdk"
+export UNA_SDK="/path/to/una-sdk"
 
 # 2. Configure build with CMake
 cd Software/Apps/FreshBreath-CMake

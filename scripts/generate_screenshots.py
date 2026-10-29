@@ -8,7 +8,8 @@ import math
 import os
 from PIL import Image, ImageDraw, ImageFont
 
-FONT_DIR = "/Users/scottcowie/repos/una-sdk/Examples/Apps/Workout/Software/Apps/TouchGFX-GUI/assets/fonts"
+UNA_SDK = os.environ.get("UNA_SDK", os.path.expanduser("~/repos/una-sdk"))
+FONT_DIR = os.path.join(UNA_SDK, "Examples/Apps/Workout/Software/Apps/TouchGFX-GUI/assets/fonts")
 MOCKUP_DIR = "assets/mockups"
 SCREENSHOT_DIR = "assets/screenshots"
 PREVIEW_DIR = "assets/previews"
